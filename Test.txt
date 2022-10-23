@@ -1,0 +1,7 @@
+if(v_lightmapUV.y<0.875){ //checks if the top of the block is receiving x light 
+        diffuse.rgb *= vec3(0.76, 0.76, 0.81)+v_lightmapUV.x*vec3(0.24, 0.24, 0.19);
+
+        /*first, multiply the diffuse.rgb by <1 to make it darker (shadow) then checks if the shadow is receiving light
+        if true, cancel the shadow by adding x to the multiplication so it turns into 1 + the light value so the light
+        has a normal effect*/
+    } 
