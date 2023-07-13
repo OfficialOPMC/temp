@@ -1,0 +1,2072 @@
+
+Prefix = ";"
+
+if #Prefix > 4 or #Prefix < 0 then
+Prefix = ";"
+end
+
+playersService = game:GetService("Players")
+replicatedStorage = game:GetService("ReplicatedStorage")
+starterGui = game:GetService("StarterGui")
+coreGui = game:GetService("CoreGui")
+runService = game:GetService("RunService")
+localPlayer = playersService.LocalPlayer
+createCommand = localPlayer.Chatted
+teleportService = game:GetService("TeleportService")
+
+noclipPartsxyz = {}
+noclip = false
+tnoclip = false
+swim = false
+xnoclip = false
+
+function GetPlayer(String)
+local Found = {}
+local strl = tostring(String:lower())
+local GetOnce = false
+if strl == "all" then
+for i,v in pairs(playersService:GetPlayers()) do
+table.insert(Found,v.Name)
+end
+elseif strl == "others" then
+for i,v in pairs(playersService:GetPlayers()) do
+if v.Name ~= localPlayer.Name then
+table.insert(Found,v.Name)
+end
+end
+elseif strl == "me" then
+for i,v in pairs(playersService:GetPlayers()) do
+if v.Name == localPlayer.Name then
+table.insert(Found,v.Name)
+end
+end
+else
+if strl~="" then
+for i,v in pairs(playersService:GetPlayers()) do
+if v.Name:lower()==strl and GetOnce == false then
+GetOnce=true
+table.insert(Found,v.Name)
+end
+if v.Name:lower():sub(1, #String) == strl or v.DisplayName:lower():sub(1, #String) == strl and GetOnce == false then
+GetOnce=true
+table.insert(Found,v.Name)
+end
+end
+end
+end
+return Found 
+end
+
+function fastwait()
+runService.Heartbeat:wait()
+end
+
+function notify(nxst)
+local x=tostring(nxst)
+print(x)
+game:GetService("StarterGui"):SetCore("SendNotification", {
+Title = "Info";
+Text = x;
+Duration = 3;
+Button1 = "Okay";
+})
+end
+
+function xtp(part,position,xp)
+local p = part
+if p ~= nil and (p:IsA("Part") or p:IsA("BasePart")) then
+local ts = game:GetService("TweenService")
+local function a(b,c)
+    return c*b
+end
+local d = (a(p.CFrame:ToAxisAngle()) - a(position:ToAxisAngle())).magnitude/math.pi
+local tsp = d/tonumber(xp)
+local ti = TweenInfo.new(tonumber(tsp), Enum.EasingStyle.Linear)
+local tp = {CFrame = position}
+ts:Create(p, ti, tp):Play()
+end
+end
+
+function getHm(plr)
+local x=plr
+local y
+if x.ClassName=="Model" then
+if x:FindFirstChildOfClass("Humanoid") then
+y=x:FindFirstChildOfClass("Humanoid")
+end
+return y
+end
+x=playersService[plr.Name]
+if x.Character and x.Character:FindFirstChildOfClass("Humanoid") then
+y=x.Character:FindFirstChildOfClass("Humanoid")
+end
+return y
+end
+
+function getRP(plr)
+return getHm(playersService[plr.Name]).RootPart
+end
+
+function partCheckxyz(obj)
+if obj:IsA("WedgePart") or obj:IsA("BasePart") or obj:IsA("Part") or obj:IsA("MeshPart") or obj:IsA("UnionOperation") or obj:IsA("Seat") then
+return true
+else
+return false
+end
+end
+
+function xyzMakeTag(name,parent)
+local x=Instance.new("Folder")
+x.Name=name
+x.Parent=parent
+return x
+end
+
+function fegod()
+if localPlayer.Character:FindFirstChildOfClass("Humanoid") then
+local x=localPlayer.Character:FindFirstChildOfClass("Humanoid")
+local y=x.RigType
+x:Destroy()
+Instance.new("Humanoid",localPlayer.Character).RigType=y
+else
+Instance.new("Humanoid",localPlayer.Character)
+end
+end
+
+local scbg
+if not coreGui:FindFirstChild('setclipboardxyz') then
+scbg = Instance.new("ScreenGui")
+local Fxe = Instance.new("Frame")
+local szy = Instance.new("ScrollingFrame")
+local scb = Instance.new("TextBox")
+scbg.Parent = coreGui
+scbg.Name = "setclipboardxyz"
+Fxe.Parent = scbg
+szy.Name = "szy"
+szy.Parent = Fxe
+szy.Size = UDim2.new(0, 180, 0, 130)
+scb.TextEditable=false
+scb.Name = "exe"
+scb.Parent = szy
+scb.Size = UDim2.new(1, 0, 1, 0)
+scb.MultiLine = true
+scb.ClearTextOnFocus = false
+scbg.Frame.Visible = false
+scbg.Frame.Position = UDim2.new(0, 600, 1, -500)
+end
+scbg = coreGui:FindFirstChild('setclipboardxyz')
+function setclipboard(x)
+scbg.Frame.szy.exe.Text = tostring(x)
+end
+
+function xreset()
+local x = localPlayer.Character:FindFirstChildOfClass("Humanoid")
+if x.RigType == Enum.HumanoidRigType.R15 then
+x.RigType = Enum.HumanoidRigType.R6
+else
+x.RigType = Enum.HumanoidRigType.R15
+end
+end
+
+function yreset()
+localPlayer.Character.Humanoid:RemoveAccessories()
+for i,v in pairs(localPlayer.Character:GetChildren()) do
+if v:IsA("BasePart") then
+v:Destroy()
+end
+end
+fegod()
+end
+
+function GIBN(String,dir,oneonly)
+local Found = {}
+local strl = String:lower()
+local GetOnce=oneonly
+if GetOnce==nil then
+GetOnce=false
+end
+if strl~="" then
+if strl == "all" then
+for i,v in pairs(dir:GetChildren()) do
+GetOnce=true
+table.insert(Found,v.Name)
+end
+end
+for i,v in pairs(dir:GetChildren()) do
+if v.Name:lower()==strl and GetOnce==false then
+GetOnce=true
+table.insert(Found,v.Name)
+end
+if v.Name:lower():sub(1, #String) == strl and GetOnce == false then
+GetOnce=true
+table.insert(Found,v.Name)
+end
+end
+end
+return Found 
+end
+
+
+function anonymous()
+for i,v in pairs(localPlayer.Character:GetDescendants()) do
+if v.ClassName == "CharacterMesh" or v.ClassName == "SpecialMesh" or v.ClassName == "Pants" or v.ClassName == "Shirt" or v.ClassName == "BillboardGui" or v.Name=="face" then
+v:Destroy()
+end
+end
+end
+function cca()
+for i,v in pairs(localPlayer.Character:GetChildren()) do
+if v.ClassName == "Accessory" then
+v.Handle:BreakJoints()
+end
+end
+end
+function fcr()
+local xc=localPlayer.Character
+localPlayer.Character=nil
+localPlayer.Character=xc
+wait(game.Players.RespawnTime-0.135)
+localPlayer.Character:Destroy()
+localPlayer.Character=nil
+end
+
+function xfiretouchinterest(part1,part2)
+local x = part1.CFrame
+local y = part1.CanCollide
+local z = part1.Transparency
+local a = part1.CanTouch
+local b = part2.CanTouch
+part1.CanTouch = true
+part2.CanTouch = true
+part1.CanCollide = false
+part1.CFrame = part2.CFrame
+part1.Transparency = 1
+fastwait()
+part1.CFrame = x
+part1.CanCollide = y
+part1.Transparency = z
+part1.CanTouch = a
+part2.CanTouch = b
+end
+function firetouchinterest(part)
+xfiretouchinterest(part,localPlayer.Character:FindFirstChildOfClass("Part"))
+end
+
+function fsp(F, ...)
+assert(type(F) == "function")
+local A = {...}
+local C = select("#", ...)
+local B = Instance.new("BindableEvent")
+B.Event:Connect(function()
+F(unpack(A, 1, C))
+end)
+B:Fire()
+B:Destroy()
+end
+
+function xyzTTP(tool,cframe)
+local x=tool or getToolxyz()
+local z=cframe
+local Arm
+local h=localPlayer.Character:FindFirstChildOfClass("Humanoid")
+if h.RigType == Enum.HumanoidRigType.R15 then
+Arm=localPlayer.Character.RightHand.CFrame * CFrame.new(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0)
+else
+Arm=localPlayer.Character['Right Arm'].CFrame * CFrame.new(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0)
+end
+x.Grip = Arm:ToObjectSpace(z):Inverse()
+x.GripPos=Vector3.new(x.Grip.X,x.Grip.Y,x.Grip.Z)
+x.Parent=localPlayer.Backpack
+x.Parent=localPlayer.Character
+end
+
+
+function fti(part1,part2,delay)
+local pxp=part1
+local xp=part2
+local xpc=xp.CFrame
+local xpa=xp.CanCollide
+spawn(function()
+xp.CanCollide=false
+xp.CFrame=pxp.CFrame
+if delay~=nil then
+wait(tonumber(delay))
+else
+fastwait()
+end
+xp.CFrame=xpc
+xp.CanCollide=xpa
+end)
+end
+
+
+function getSoundSource(a,bool)
+local isSoundS=true
+local sound = a
+local sstring
+if typeof(a)=="Instance" and sound:IsA("Sound") then
+sstring = string.lower(sound.SoundId)
+else
+sstring = tostring(sound)
+isSoundS=false
+end
+local xstring
+local ystring=sstring
+if string.find(sstring,"http") then
+xstring = string.gsub(sstring,string.lower("http://www.roblox.com/asset/?"),"")
+ystring = string.gsub(xstring,"?id=","")
+end
+if string.find(sstring,"rbx") then
+xstring = string.gsub(sstring,string.lower("rbxassetid://"),"")
+ystring = xstring
+end
+local id 
+if isSoundS then
+id = sound.SoundId:match("%d+")
+else
+id = sstring:match("%d+")
+end
+local Asset = game:GetService("MarketplaceService"):GetProductInfo(id)
+local source=Asset.Name.." "..ystring
+if bool==true then
+notify(source)
+end
+return source
+end
+
+
+function hrp(nm,part)
+local nmx=tostring(nm)
+if workspace:FindFirstChild(nmx) then
+workspace[nmx]:Destroy()
+end
+local hh
+if part==nil then
+hh=localPlayer.Character.HumanoidRootPart
+else
+hh=part
+end
+local pp=Instance.new("Part")
+pp.Parent = workspace
+pp.Name = nmx
+pp.Size = hh.Size
+pp.Transparency = 1
+pp.CFrame = hh.CFrame
+pp.CanCollide = false
+local ww=Instance.new("Weld",pp)
+ww.Part0=hh
+ww.Part1=pp
+ww.C0 = hh.CFrame
+ww.C1 = hh.CFrame
+return pp
+end
+
+
+local clkm
+local fclkm
+local FlyTogglexyz
+local sxyzflying = false
+local sxspeed = 1
+local fonmd
+local fonmu
+local flyNoSit=false
+local alreadyflying = false
+local flyHasSit=false
+local flykeyToggle
+local stateSeatedStore=false
+function makeFly(part,bypassN)
+if sxyzflying == false and alreadyflying == false then
+local mouse = localPlayer:GetMouse()
+repeat fastwait() until mouse
+repeat fastwait()
+    until localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Part")
+local plr = localPlayer
+if part==nil then
+part=getHm(plr).RootPart
+end
+part.Anchored=true
+if getHm(plr).Health==0 then
+getHm(plr).BreakJointsOnDeath = false
+end
+local torso = hrp(bypassN,part)
+part.Anchored=false
+
+local flying = true
+local deb = true
+local ctrl = {f = 0, b = 0, l = 0, r = 0}
+local lastctrl = {f = 0, b = 0, l = 0, r = 0}
+
+
+function sFly()
+if getHm(localPlayer):GetStateEnabled(Enum.HumanoidStateType.Seated) == false then
+flyNoSit = true
+flyHasSit = true
+getHm(localPlayer):SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+getHm(localPlayer).Sit=true--Disable Sit
+local Humanoid=getHm(localPlayer)
+for i=1,8 do
+Humanoid:SetStateEnabled(i, false)
+end
+Humanoid:SetStateEnabled(10, false)
+Humanoid:SetStateEnabled(12, false)
+Humanoid:ChangeState(0)
+for i, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
+v:Stop()
+end
+end
+local zxczspeed
+local bg = Instance.new("BodyGyro", torso)
+bg.P = 9e4
+bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+bg.cframe = torso.CFrame
+local bv = Instance.new("BodyVelocity", torso)
+bv.velocity = Vector3.new(0,0,0)
+bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+spawn(function()
+repeat fastwait()
+if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
+zxczspeed = 50
+elseif not (ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0) and zxczspeed ~= 0 then
+zxczspeed = 0
+end
+if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
+bv.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (ctrl.f+ctrl.b)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(ctrl.l+ctrl.r,(ctrl.f+ctrl.b)*.2,0).p) - workspace.CurrentCamera.CoordinateFrame.p))*zxczspeed
+lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
+elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 and zxczspeed ~= 0 then
+bv.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (lastctrl.f+lastctrl.b)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lastctrl.l+lastctrl.r,(lastctrl.f+lastctrl.b)*.2,0).p) - workspace.CurrentCamera.CoordinateFrame.p))*zxczspeed
+else
+bv.velocity = Vector3.new(0,0,0)
+end
+bg.cframe = workspace.CurrentCamera.CoordinateFrame
+until not flying or sxyzflying == false
+ctrl = {f = 0, b = 0, l = 0, r = 0}
+lastctrl = {f = 0, b = 0, l = 0, r = 0}
+zxczspeed = 0
+bg:Destroy()
+bv:Destroy()
+end)
+end
+fonmd=mouse.KeyDown:connect(function(key)
+if key:lower() == "w" then
+ctrl.f = sxspeed
+elseif key:lower() == "s" then
+ctrl.b = -sxspeed
+elseif key:lower() == "a" then
+ctrl.l = -sxspeed
+elseif key:lower() == "d" then
+ctrl.r = sxspeed
+end
+end)
+fonmu=mouse.KeyUp:connect(function(key)
+if key:lower() == "w" then
+ctrl.f = 0
+elseif key:lower() == "s" then
+ctrl.b = 0
+elseif key:lower() == "a" then
+ctrl.l = 0
+elseif key:lower() == "d" then
+ctrl.r = 0
+end
+end)
+if flykeyToggle == nil then
+flykeyToggle = "t"
+end
+FlyTogglexyz=mouse.KeyDown:connect(function(key)
+if key == flykeyToggle then
+if sxyzflying == true then
+sxyzflying = false
+alreadyflying = true
+if getHm(localPlayer):GetStateEnabled(Enum.HumanoidStateType.Seated) == false then
+flyNoSit = true
+flyHasSit = true
+getHm(localPlayer):SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+getHm(localPlayer).Sit=false--Enable Sit again
+local Humanoid=getHm(localPlayer)
+for i=1,8 do
+Humanoid:SetStateEnabled(i, true)
+end
+Humanoid:SetStateEnabled(10, true)
+Humanoid:SetStateEnabled(12, true)
+Humanoid:ChangeState(5)
+for i, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
+v:Play()
+end
+
+end
+else
+sxyzflying = true
+if flyHasSit then
+flyNoSit=true
+getHm(localPlayer):SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+getHm(localPlayer).Sit=true--Disable Sit
+local Humanoid=getHm(localPlayer)
+for i=1,8 do
+Humanoid:SetStateEnabled(i, false)
+end
+Humanoid:SetStateEnabled(10, false)
+Humanoid:SetStateEnabled(12, false)
+Humanoid:ChangeState(0)
+for i, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
+v:Stop()
+end
+
+end
+sFly()
+end
+end
+end)
+clkm=localPlayer.Character
+fclkm=localPlayer.CharacterAdded:connect(function()
+if clkm.Parent==nil then
+unFly()
+fclkm:Disconnect()
+notify("Character changed, unfly function called")
+end
+end)
+sxyzflying = true
+sFly()
+else
+--notify("Already flying")
+end
+end
+
+function setFlySpeed(num)
+sxspeed=tonumber(num)
+end
+
+function setFlyTK(key)
+flykeyToggle=tostring(key)
+end
+
+function unFly()
+fonmd:Disconnect()
+fonmu:Disconnect()
+fclkm:Disconnect()
+FlyTogglexyz:Disconnect()
+sxyzflying = false
+alreadyflying = false
+if flyNoSit == true then
+if getHm(localPlayer)~= nil then
+getHm(localPlayer):SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+getHm(localPlayer).Sit=false--Enable Sit again
+local Humanoid=getHm(localPlayer)
+for i=1,8 do
+Humanoid:SetStateEnabled(i, true)
+end
+Humanoid:SetStateEnabled(10, true)
+Humanoid:SetStateEnabled(12, true)
+Humanoid:ChangeState(5)
+for i, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
+v:Play()
+end
+end
+end
+flyNoSit = false
+flyHasSit = false
+end
+
+
+
+
+
+function saveCCFramexyz(cfn)
+local aacf
+if not localPlayer:FindFirstChild("CFramexyzSaves") then
+aacf=xyzMakeTag("CFramexyzSaves",localPlayer)
+else
+aacf=localPlayer:FindFirstChild("CFramexyzSaves")
+end
+if not aacf:FindFirstChild(cfn) then
+local x=Instance.new("Part",aacf)
+x.Name=cfn
+x.Anchored=true
+x.Size=Vector3.new(1,1,1)
+x.Transparency=1
+if getRP(localPlayer)~=nil then
+x.CFrame=getRP(localPlayer).CFrame
+else
+x.CFrame=localPlayer.Character.Head.CFrame
+end
+else
+aacf[cfn]:Destroy()
+local x=Instance.new("StringValue",aacf)
+x.Name=cfn
+x.Name=cfn
+x.Anchored=true
+x.Size=Vector3.new(1,1,1)
+x.Transparency=1
+if getRP(localPlayer)~=nil then
+x.CFrame=getRP(localPlayer).CFrame
+else
+x.CFrame=localPlayer.Character.Head.CFrame
+end
+
+end
+end
+
+function loadCCFramexyz(cfn)
+local aacf
+if not localPlayer:FindFirstChild("CFramexyzSaves") then
+aacf=xyzMakeTag("CFramexyzSaves",localPlayer)
+else
+aacf=localPlayer:FindFirstChild("CFramexyzSaves")
+end
+if aacf:FindFirstChild(cfn) then
+local x=aacf[cfn]
+if getRP(localPlayer)~=nil then
+getRP(localPlayer).CFrame=x.CFrame
+else
+localPlayer.Character.Head.CFrame=x.CFrame
+end
+
+else
+
+end
+end
+
+
+
+
+
+
+
+local xyzesp = false
+function espPart(part,player)
+if not coreGui:FindFirstChild("espF") then
+Instance.new("Folder",coreGui).Name = "espF"
+end
+local esp = Instance.new("BoxHandleAdornment",coreGui.espF)
+esp.Adornee = part
+esp.AlwaysOnTop = true
+esp.ZIndex = 1
+esp.Transparency = 0.5
+esp.Size = part.Size
+esp.Color3 = Color3.fromRGB(250,50,250)
+player.CharacterRemoving:Connect(function()
+esp:Destroy()
+end)
+end
+function espPlayer(player)
+    if player.Character ~= nil and player.Name ~= localPlayer.Name then
+        for _,part in pairs(player.Character:GetChildren()) do
+            if partCheckxyz(part) then
+                espPart(part,player)
+            end
+        end
+    end
+end
+game:GetService('Players').PlayerAdded:Connect(function(Player)
+Player.CharacterAdded:Connect(function(Char)
+Player.Character.ChildAdded:Connect(function(obj)
+if partCheckxyz(obj) and xyzesp == true then
+espPart(obj,Player)
+end
+end)
+end)
+end)
+for _,Player in pairs(game:GetService('Players'):GetPlayers()) do
+if Player ~= LP then
+Player.Character.ChildAdded:Connect(function(obj)
+if partCheckxyz(obj) and xyzesp == true then
+espPart(obj,Player)
+end
+end)
+end
+end
+
+
+function ycc()
+for i,v in pairs(localPlayer.Character:GetChildren()) do
+if v:IsA("Part") or v:IsA("MeshPart") or v:IsA("Humanoid") then
+v:Destroy()
+end
+end
+Instance.new("Humanoid",localPlayer.Character)
+end
+function xcc()
+localPlayer.Character:Destroy()
+localPlayer.Character=nil
+end
+
+
+local xccc
+function getLC()
+return xccc
+end
+for i,v in pairs(playersService:GetPlayers()) do
+if v.Character and not v.Character:FindFirstChild("xyzMM") and v.Character:FindFirstChildOfClass("Humanoid") and v.Character:FindFirstChildOfClass("Humanoid").Health~=0 then
+local x=Instance.new("Folder")
+x.Name="xyzMM"
+x.Parent=v.Character
+end
+end
+local xtc=localPlayer.Character
+xccc=xtc
+if xyzCharacterGetLCFLC then
+xyzCharacterGetLCFLC:Disconnect()
+end
+xyzCharacterGetLCFLC=localPlayer.CharacterAdded:connect(function()
+if xtc.Parent==nil then
+xtc=localPlayer.Character
+xccc=xtc
+for i,v in pairs(playersService:GetPlayers()) do
+if v.Character and not v.Character:FindFirstChild("xyzMM") and v.Character:FindFirstChildOfClass("Humanoid") and v.Character:FindFirstChildOfClass("Humanoid").Health~=0 then
+local x=Instance.new("Folder")
+x.Name="xyzMM"
+x.Parent=v.Character
+end
+end
+end
+end)
+
+
+function getXM()
+local x={}
+for i,v in pairs(playersService:GetPlayers()) do
+if v.Character:FindFirstChild("xyzMM") then
+table.insert(x,v)
+end
+end
+return x
+end
+
+function mwC(plr)
+local x=playersService[plr.Name]
+for _, v in pairs(x.Character:GetDescendants()) do
+if v.ClassName == "Part" then
+v.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0)
+end
+end
+end
+
+
+if nclp then
+nclp:Disconnect()
+end
+nclp=game:GetService('RunService').Stepped:connect(function()
+if noclip then
+for i=1,#noclipPartsxyz do
+noclipPartsxyz[i].CanCollide=false
+end
+if tnoclip then
+for i,v in pairs(localPlayer.Character:GetDescendants()) do
+if v:IsA("Weld") and v.Part1:IsDescendantOf(localPlayer.Character)==false then
+local wP=v.Part1
+repeat
+wP=wP.Parent
+until wP.Parent.ClassName~="Model" and wP.ClassName=="Model" or wP==workspace or wP==game
+
+for ii,vv in pairs(wP:GetDescendants()) do
+if partCheckxyz(vv) then
+vv.CanCollide = false
+end
+end
+
+
+end
+end
+
+if getHm(localPlayer) ~= nil and getHm(localPlayer).SeatPart ~= nil then
+
+local vM=getHm(localPlayer).SeatPart--.Parent
+repeat
+vM=vM.Parent
+fastwait()
+until not (vM.Parent.ClassName=="Model" and vM.ClassName=="Model") or vM==game
+for i,v in pairs(vM:GetDescendants()) do
+if partCheckxyz(v) then
+v.CanCollide = false
+end
+end
+
+end
+end
+end
+if xnoclip then
+if getHm(localPlayer)~=nil then
+getHm(localPlayer):ChangeState(11)
+end
+end
+if swim then
+if getHm(localPlayer)~=nil then
+getHm(localPlayer):ChangeState(4)
+end
+end
+end)
+
+
+
+function addCommandxyz(commandFunctionxyz,textGuiBool,chatBool)
+local xyzAddedFunctions={}
+local onTextGuiF
+local onChatF
+local function xyzAdminCommandA(msg)
+commandFunctionxyz(msg)
+end
+if textGuiBool == true then
+--notify("textBool")
+onTextGuiF=xyzGetCmdText().FocusLost:Connect(function(enterPressed)
+if enterPressed then
+xyzAdminCommandA(xyzGetCmdText().Text)
+end
+end)
+table.insert(xyzAddedFunctions,onTextGuiF)
+end
+if chatBool == true then
+--notify("chatBool")
+onChatF=createCommand:Connect(function(msg)
+xyzAdminCommandA(msg)
+end)
+table.insert(xyzAddedFunctions,onChatF)
+end
+return xyzAddedFunctions
+end
+
+
+--Functions^
+
+
+local public = false
+
+
+local xss
+local xssb
+
+
+local network = false
+
+
+local lasCharacter = localPlayer.Character
+local pkslas = false
+
+local delayvoid = 0.3
+
+local xkcf
+
+local AFKTogglexyz=false
+local xAfkF
+
+local xyzgur
+local xyzgux=false
+
+local rockettargetofhone
+
+local SavedCoordinate
+
+
+
+local prefix=Prefix
+local vzx = Instance.new("ScreenGui")
+local mnb = Instance.new("Frame")
+local lxcz = Instance.new("TextBox")
+vzx.Parent = coreGui
+vzx.Name = "CMDe"
+mnb.Name = "L"
+mnb.Parent = vzx
+mnb.BackgroundColor3 = Color3.new(0.3, 0.1, 0.1)
+mnb.BackgroundTransparency = 0.3
+mnb.Position = UDim2.new(0.5, 0, 0, 10)
+mnb.Size = UDim2.new(0, 200, 0, 40)
+mnb.Active = true
+mnb.Draggable = true
+lxcz.Name = "CMDBAR"
+lxcz.Parent = mnb
+lxcz.BackgroundColor3 = Color3.new(0.105882, 0.164706, 0.207843)
+lxcz.BackgroundTransparency = 0.20000000298023
+lxcz.Size = UDim2.new(0, 180, 0, 20)
+lxcz.Position = UDim2.new(0.05, 0, 0.25, 0)
+lxcz.Font = Enum.Font.SourceSansLight
+lxcz.FontSize = Enum.FontSize.Size14
+lxcz.TextColor3 = Color3.new(0.945098, 0.945098, 0.945098)
+lxcz.TextScaled = true
+lxcz.TextSize = 14
+lxcz.TextWrapped = true
+lxcz.Text = "Press ; to type, Enter to execute"
+local cxz = localPlayer:GetMouse()
+cxz.KeyDown:connect(function(Key)
+	if Key == prefix then
+		lxcz:CaptureFocus()
+		lxcz.Text = ""
+	end
+end)
+lxcz.FocusLost:connect(function(enterPressed)
+	if enterPressed then
+		xyzRunAdminCommand(lxcz.Text)
+	end
+end)
+function xyzGetCmdText()
+return lxcz
+end
+
+
+
+
+--Variables^
+
+
+
+createCommand:Connect(function(msg)
+xyzRunAdminCommand(msg)
+end)
+
+
+
+function xyzRunAdminCommand(msg)
+if msg:lower() == Prefix.."rejoin" then
+game:GetService('TeleportService'):TeleportToPlaceInstance(game.PlaceId, game.JobId, localPlayer)
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."goto " then
+for i,v in pairs(GetPlayer(string.sub(msg,6+Prefix:len()))) do
+xtp(getRP(localPlayer),playersService[v].Character:FindFirstChildOfClass("Part").CFrame,math.huge)
+end
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."to " then
+for i,v in pairs(GetPlayer(string.sub(msg,4+Prefix:len()))) do
+localPlayer.Character.HumanoidRootPart.CFrame = playersService[v].Character.HumanoidRootPart.CFrame
+end
+end
+if msg:lower():sub(1,8+Prefix:len()) == Prefix.."analyze " then
+for i,v in pairs(GetPlayer(string.sub(msg,9+Prefix:len()))) do
+for x, y in pairs(playersService[v].Character:GetChildren()) do
+print(y.Name.." "..y.ClassName.." "..y:GetFullName())
+end
+print()
+for x, y in pairs(playersService[v].Backpack:GetChildren()) do
+print(y.Name.." "..y.ClassName.." "..y:GetFullName())
+end
+end
+end
+if msg:lower():sub(1,9+Prefix:len()) == Prefix.."fanalyze " then
+for i,v in pairs(GetPlayer(string.sub(msg,10+Prefix:len()))) do
+for x, y in pairs(playersService[v]:GetDescendants()) do
+print(y.Name.." "..y.ClassName.." "..y:GetFullName())
+end
+end
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."ws " then
+localPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = (string.sub(msg, 5))
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."jp " then
+localPlayer.Character:FindFirstChildOfClass("Humanoid").JumpPower = (string.sub(msg, 5))
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."hh " then
+localPlayer.Character:FindFirstChildOfClass("Humanoid").HipHeight = (string.sub(msg, 5))
+end
+if msg:lower() == Prefix.."fegod" then
+fegod()
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."view " then
+for i,v in pairs(GetPlayer(string.sub(msg,6+Prefix:len()))) do
+workspace.CurrentCamera.CameraSubject = playersService[v].Character
+end
+end
+if msg:lower() == Prefix.."unaimbot" then
+workspace.CurrentCamera.CameraSubject = localPlayer.Character
+end
+if msg:lower() == Prefix.."exe" then
+if coreGui.scg.xFrame.Visible == true then
+coreGui.scg.xFrame.Visible = false
+else
+coreGui.scg.xFrame.Visible = true
+end
+end
+if msg:lower() == Prefix.."scb" then
+if scbg.Frame.Visible == true then
+scbg.Frame.Visible = false
+else
+scbg.Frame.Visible = true
+end
+end
+if msg:lower() == Prefix.."unview" then
+workspace.CurrentCamera.CameraSubject = localPlayer.Character
+end
+if msg:lower():sub(1,6+Prefix:len()) == Prefix.."vdoll " then
+for i,v in pairs(GetPlayer(string.sub(msg,7+Prefix:len()))) do
+playersService[v].Character.HumanoidRootPart.CFrame = localPlayer.Character.HumanoidRootPart.CFrame
+playersService[v].Character.HumanoidRootPart.Anchored = true
+end
+end
+if msg:lower():sub(1,8+Prefix:len()) == Prefix.."unvdoll " then
+for i,v in pairs(GetPlayer(string.sub(msg,9+Prefix:len()))) do
+playersService[v].Character.HumanoidRootPart.Anchored = false
+end
+end
+if msg:lower() == Prefix.."ironweight" then
+local density = 9e9
+local char = localPlayer.Character
+for _, child in pairs(char:GetDescendants()) do
+if child.ClassName == "Part" then
+child.CustomPhysicalProperties = PhysicalProperties.new(density, 0.3, 0.5)
+end
+end
+end
+if msg:lower() == Prefix.."xreset" then
+xreset()
+end
+if msg:lower() == Prefix.."yreset" then
+yreset()
+end
+if msg:lower() == Prefix.."spychat load" then
+if not localPlayer:FindFirstChild("xyzSpyChat") then
+local enabled = true
+local spyOnMyself = false
+local publicItalics = true
+local privateProperties = {
+	Color = Color3.fromRGB(0,255,255);
+	Font = Enum.Font.SourceSansBold;
+	TextSize = 18;
+}
+local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() or Players.LocalPlayer
+local saymsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest")
+local getmsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("OnMessageDoneFiltering")
+local instance = (_G.chatSpyInstance or 0) + 1
+_G.chatSpyInstance = instance
+local function onChatted(p,msg)
+	if _G.chatSpyInstance == instance then
+		if p==player and msg:lower():sub(1,4)=="/spy" then
+			enabled = not enabled
+			wait(0.3)
+			privateProperties.Text = "{SPY "..(enabled and "EN" or "DIS").."ABLED}"
+			StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
+		elseif enabled and (spyOnMyself==true or p~=player) then
+			msg = msg:gsub("[\n\r]",''):gsub("\t",' '):gsub("[ ]+",' ')
+			local hidden = true
+			local conn = getmsg.OnClientEvent:Connect(function(packet,channel)
+				if packet.SpeakerUserId==p.UserId and packet.Message==msg:sub(#msg-#packet.Message+1) and (channel=="All" or (channel=="Team" and public==false and Players[packet.FromSpeaker].Team==player.Team)) then
+					hidden = false
+				end
+			end)
+			wait(1)
+			conn:Disconnect()
+			if hidden and enabled then
+				if public then
+					saymsg:FireServer((publicItalics and "m " or '').."{SPY} [".. p.Name .."]: "..msg,"All")
+				else
+					privateProperties.Text = "{SPY} [".. p.Name .."]: "..msg
+					StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
+				end
+			end
+		end
+	end
+end
+for _,p in ipairs(Players:GetPlayers()) do
+	p.Chatted:Connect(function(msg) onChatted(p,msg) end)
+end
+Players.PlayerAdded:Connect(function(p)
+	p.Chatted:Connect(function(msg) onChatted(p,msg) end)
+end)
+privateProperties.Text = "{SPY "..(enabled and "EN" or "DIS").."ABLED}"
+StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
+if not player.PlayerGui:FindFirstChild("Chat") then wait(3) end
+local chatFrame = player.PlayerGui:WaitForChild("Chat").Frame
+chatFrame.ChatChannelParentFrame.Visible = true
+chatFrame.ChatBarParentFrame.Position = chatFrame.ChatChannelParentFrame.Position+UDim2.new(UDim.new(),chatFrame.ChatChannelParentFrame.Size.Y)
+if msg:lower() == Prefix.."spychat public" then
+public = true
+end
+if msg:lower() == Prefix.."spychat unpublic" then
+public = false
+end
+end
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."eq " then
+for i,v in pairs(string.split(msg, " ")) do
+for x,z in pairs(GIBN(v,localPlayer.Backpack)) do
+local xt=localPlayer.Backpack[z]
+if xt:IsA("Tool") then
+xt.Parent=localPlayer.Character
+end
+end
+end
+end
+if msg:lower() == Prefix.."aq" then
+for i,v in pairs(localPlayer.Character:GetChildren()) do
+if v:IsA("Tool") then
+v:Activate()
+end
+end
+end
+if msg:lower():sub(1,4+Prefix:len()) == Prefix.."xeq " then
+for i,v in pairs(localPlayer.Backpack:GetChildren()) do
+if v.Name:lower():sub(1, #string.sub(msg, 6):lower()) == string.sub(msg, 6):lower() then
+if v:IsA("Tool") then
+v.Parent=localPlayer.Character
+end
+end
+end
+end
+if msg:lower():sub(1,4+Prefix:len()) == Prefix.."xaq " then
+for i,v in pairs(localPlayer.Character:GetChildren()) do
+if v.Name:lower():sub(1, #string.sub(msg, 6):lower()) == string.sub(msg, 6):lower() then
+if v:IsA("Tool") then
+v:Activate()
+end
+end
+end
+end
+if msg:lower() == Prefix.."fcr" then
+fcr()
+end
+if msg:lower() == Prefix.."fcl" then
+local yc
+Instance.new("Folder",localPlayer.Character).Name = "sadojoa"
+fsp(function()
+while localPlayer.Character~=nil and localPlayer.Character:FindFirstChild("sadojoa") do
+yc=localPlayer.Character.HumanoidRootPart.CFrame
+fastwait()
+end
+end)
+fcr()
+localPlayer.CharacterAdded:wait()
+repeat fastwait() until localPlayer.Character~=nil and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+localPlayer.Character:WaitForChild("HumanoidRootPart")
+localPlayer.Character:WaitForChild("Head")
+wait(0.05)
+localPlayer.Character.HumanoidRootPart.CFrame=yc
+end
+if msg:lower() == Prefix.."anonymous" then
+anonymous()
+end
+if msg:lower() == Prefix.."cca" then
+cca()
+end
+if msg:lower() == Prefix.."naked" then
+for i,v in pairs(localPlayer.Character:GetDescendants()) do
+if v.ClassName == "Pants" or v.ClassName == "Shirt"then
+v:Destroy()
+end
+end
+end
+if msg:lower() == Prefix.."getplayernames" or msg:lower() == Prefix.."gpn" then
+if not localPlayer:FindFirstChild("ihta8h") then
+Instance.new("Folder",localPlayer).Name="ihta8h"
+local string=""
+local x="ihta8h"
+for i,v in pairs(playersService:GetPlayers()) do
+if v.Name ~= localPlayer.Name and not localPlayer[x]:FindFirstChild(v.Name) then
+string = string.."\n"..v.Name.." UserID:"..v.UserId.." DisplayName:"..v.DisplayName.." MT:"..string.gsub(tostring(v.MembershipType),"Enum.MembershipType.","")
+local ss=Instance.new("Folder",localPlayer[x])
+ss.Name=v.Name
+local id=Instance.new("StringValue",ss)
+id.Name="UserId"
+id.Value=tostring(v.UserId)
+local dn=Instance.new("StringValue",ss)
+dn.Name="DisplayName"
+dn.Value=tostring(v.DisplayName)
+local mt=Instance.new("StringValue",ss)
+mt.Name="MembershipType"
+mt.Value=tostring(v.MembershipType)
+end
+end
+setclipboard(string)
+playersService.PlayerAdded:connect(function(plr)
+local v=plr
+if v.Name ~= localPlayer.Name and not localPlayer[x]:FindFirstChild(v.Name) then
+string = string.."\n"..v.Name.." UserID:"..v.UserId.." DisplayName:"..v.DisplayName.." MT:"..string.gsub(tostring(v.MembershipType),"Enum.MembershipType.","")
+local ss=Instance.new("Folder",localPlayer[x])
+ss.Name=v.Name
+local id=Instance.new("StringValue",ss)
+id.Name="UserId"
+id.Value=tostring(v.UserId)
+local dn=Instance.new("StringValue",ss)
+dn.Name="DisplayName"
+dn.Value=tostring(v.DisplayName)
+local mt=Instance.new("StringValue",ss)
+mt.Name="MembershipType"
+mt.Value=tostring(v.MembershipType)
+end
+end)
+end
+local string=""
+for i,v in pairs(localPlayer["ihta8h"]:GetChildren()) do
+string = string.."\n"..v.Name.." UserID:"..v.UserId.Value.." DisplayName:"..v.DisplayName.Value.." MT:"..string.gsub(tostring(v.MembershipType.Value),"Enum.MembershipType.","")
+end
+setclipboard(string)
+end
+if msg:lower():sub(1,4+Prefix:len()) == Prefix.."sts " then
+for i,v in pairs(GetPlayer(string.sub(msg,5+Prefix:len()))) do
+if playersService[v].Character and playersService[v].Character:FindFirstChild("Head") then
+if not playersService[v].Character.Head:FindFirstChild("TextNameShow") then
+local fraud = Instance.new("BillboardGui")
+fraud.Parent = playersService[v].Character:FindFirstChild("Head")
+fraud.AlwaysOnTop = true
+fraud.Size = UDim2.new(1, 1, 1)
+fraud.Name = "TextNameShow"
+fraud.Active = true
+fraud.Enabled = true
+fraud.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local esp = Instance.new("TextLabel")
+esp.Parent = fraud
+esp.Size = UDim2.new(1, 1, 1)
+esp.TextColor3 = Color3.new(23,45,67)
+esp.Active = true
+esp.Text = playersService[v].Name
+esp.ZIndex = 1
+esp.Visible = true
+esp.BackgroundTransparency = 1
+esp.TextStrokeTransparency = 1
+end
+end
+end
+end
+if msg:lower() == Prefix.."cmd" then
+local x=localPlayer.PlayerGui.CMDe.L
+if x.Visible == true then
+x.Visible = false
+else
+x.Visible = true
+end
+end
+if msg:lower() == Prefix.."feadive" then
+local debounce=false
+local function _restoreproperties()
+Holder = player.Character
+Torso = Holder:FindFirstChild("Torso")
+RightS = Torso:FindFirstChild("Right Shoulder")
+LeftS = Torso:FindFirstChild("Left Shoulder")
+RightH = Torso:FindFirstChild("Right Hip")
+LeftH = Torso:FindFirstChild("Left Hip")
+RightS.MaxVelocity = .15
+LeftS.MaxVelocity = .15
+RightH.MaxVelocity = .1
+LeftH.MaxVelocity = .1
+RightS.DesiredAngle = 0
+LeftS.DesiredAngle = 0
+LeftH.DesiredAngle = 0
+RightH.DesiredAngle = 0
+end
+local function ManageAnimation(value)
+Holder = player.Character
+Player = player
+if value == "no anim" then
+Anim = Holder:FindFirstChild("Animate")
+if Anim~=nil then
+Anim.Disabled = true
+Anim.Parent = Player
+end
+elseif value == "re-anim" then
+Anim = Player:FindFirstChild("Animate")
+if Anim~=nil then
+Anim.Disabled = false
+Anim.Parent = Holder
+end
+end
+end
+local function Down(ml)
+for i=1, ml.velocity.y/3 do
+ml.velocity = ml.velocity+Vector3.new(0,-4.25,0)
+fastwait()
+end
+ml:Remove()
+end
+local function Flip()
+if debounce==true then return end
+debounce=true
+Char = player.Character
+Human = Char.Humanoid
+Torso = Char.Torso
+CF = Torso.CFrame
+local anim = Human:LoadAnimation(Char.Animate.fall:FindFirstChildOfClass("Animation"))
+anim:Play()
+Human.PlatformStand = true
+VelUp = Instance.new("BodyVelocity")
+VelUp.velocity = Vector3.new(0,45,0)+Torso.CFrame.lookVector*30 --Middle (0,0,0). Change for height.
+VelUp.P = VelUp.P*2
+VelUp.maxForce = Vector3.new(10000,10000,10000)*999
+VelUp.Parent = Torso
+coroutine.resume(coroutine.create(Down),VelUp)
+Gyro = Instance.new("BodyGyro")
+Gyro.P = Gyro.P*10
+Gyro.maxTorque = Vector3.new(100000,100000,100000)*999
+Gyro.cframe = CF
+Gyro.Parent = Torso
+for i=1, 3 do --The amount of time your guy flips.
+Gyro.cframe = Gyro.cframe*CFrame.fromEulerAnglesXYZ(math.pi/-7,0,0) --The amount of flips. 1 = -16, 2 = -8
+fastwait()
+end
+for i=1, 6 do --The amount of time your guy flips.
+Gyro.cframe = Gyro.cframe*CFrame.fromEulerAnglesXYZ(math.pi/-40,0,0) --The amount of flips. 1 = -16, 2 = -8
+fastwait()
+end
+wait(0.2)
+for i=1, 10 do --The amount of time your guy flips.
+Gyro.cframe = Gyro.cframe*CFrame.fromEulerAnglesXYZ(math.pi/-7,0,0) --The amount of flips. 1 = -16, 2 = -8
+fastwait()
+end
+Gyro.cframe = CF
+fastwait()
+Gyro:Remove()
+Human.PlatformStand = false
+_restoreproperties()
+debounce=false
+end
+local function onActive(mouse)
+player = game.Players.LocalPlayer
+if player==nil then return end
+mouse.Button1Down:connect(function() Flip() end)
+end
+local lol = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
+lol.Name = "Dive Roll"
+lol.Selected:connect(onActive)
+end
+if msg:lower() == Prefix.."featwister" then
+local debounce=false
+local function _restoreproperties()
+Holder = player.Character
+Torso = Holder:FindFirstChild("Torso")
+RightS = Torso:FindFirstChild("Right Shoulder")
+LeftS = Torso:FindFirstChild("Left Shoulder")
+RightH = Torso:FindFirstChild("Right Hip")
+LeftH = Torso:FindFirstChild("Left Hip")
+RightS.MaxVelocity = .15
+LeftS.MaxVelocity = .15
+RightH.MaxVelocity = .1
+LeftH.MaxVelocity = .1
+RightS.DesiredAngle = 0
+LeftS.DesiredAngle = 0
+LeftH.DesiredAngle = 0
+RightH.DesiredAngle = 0
+end
+local function ManageAnimation(value)
+Holder = player.Character
+Player = player
+if value == "no anim" then
+Anim = Holder:FindFirstChild("Animate")
+if Anim~=nil then
+Anim.Disabled = true
+Anim.Parent = Player
+end
+elseif value == "re-anim" then
+Anim = Player:FindFirstChild("Animate")
+if Anim~=nil then
+Anim.Disabled = false
+Anim.Parent = Holder
+end
+end
+end
+local function Down(ml)
+for i=1, ml.velocity.y/3 do
+ml.velocity = ml.velocity+Vector3.new(0,-4.25,0)
+fastwait()
+end
+ml:Remove()
+end
+local function Flip()
+if debounce==true then return end
+debounce=true
+Char = player.Character
+Human = Char.Humanoid
+Torso = Char.Torso
+CF = Torso.CFrame
+Human.PlatformStand = true
+VelUp = Instance.new("BodyVelocity")
+VelUp.velocity = Vector3.new(0,50,0)+Torso.CFrame.lookVector*26 --Middle (0,0,0). Change for height.
+VelUp.P = VelUp.P*2
+VelUp.maxForce = Vector3.new(10000,10000,10000)*999
+VelUp.Parent = Torso
+coroutine.resume(coroutine.create(Down),VelUp)
+Gyro = Instance.new("BodyGyro")
+Gyro.P = Gyro.P*10
+Gyro.maxTorque = Vector3.new(100000,100000,100000)*999
+Gyro.cframe = CF
+Gyro.Parent = Torso
+for i=1, 1.5 do --The amount of time your guy flips.
+Gyro.cframe = Gyro.cframe*CFrame.fromEulerAnglesXYZ(math.pi/-3.5,0,0) --The amount of flips. 1 = -16, 2 = -8
+fastwait()
+end
+for i=1, 9 do --The amount of time your guy flips.
+Gyro.cframe = Gyro.cframe*CFrame.fromEulerAnglesXYZ(0,math.pi/4.5,0) --The amount of flips. 1 = -16, 2 = -8
+fastwait()
+end
+for i=1, 10.5 do --The amount of time your guy flips.
+Gyro.cframe = Gyro.cframe*CFrame.fromEulerAnglesXYZ(math.pi/-7,0,0) --The amount of flips. 1 = -16, 2 = -8
+fastwait()
+end
+Gyro.cframe = CF
+fastwait()
+Gyro:Remove()
+Human.PlatformStand = false
+_restoreproperties()
+debounce=false
+end
+local function onActive(mouse)
+player = game.Players.LocalPlayer
+if player==nil then return end
+mouse.Button1Down:connect(function() Flip() end)
+end
+x=Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
+x.Name = "Twister"
+x.Selected:connect(onActive)
+end
+if msg:lower() == Prefix.."erta" then
+for i,v in pairs(game:GetService("Players").LocalPlayer.Backpack:GetChildren()) do
+if v:IsA("Tool") then
+v.Parent=game:GetService("Players").LocalPlayer.Character
+v:Destroy()
+end
+end
+end
+if msg:lower() == Prefix.."xerta" then
+for i,v in pairs(game:GetService("Players").LocalPlayer.Backpack:GetChildren()) do
+if v:IsA("Tool") or v:IsA("Hopperbin") then
+v.Parent=game:GetService("Players").LocalPlayer.Character
+v:Destroy()
+end
+end
+end
+if msg:lower() == Prefix.."ksl" then
+workspace.FallenPartsDestroyHeight = 0/1/0
+xtp(getRP(localPlayer),CFrame.new(0,-15000,0),math.huge)
+if not workspace:FindFirstChild("xKSL") then
+local x=Instance.new("Part",workspace)
+x.Name="xKSL"
+x.Anchored=true
+x.CFrame=CFrame.new(0,-15000,0)+Vector3.new(0,-15,0)
+x.Size=Vector3.new(1000,10,1000)
+x.CastShadow=false
+x.Transparency=0.5
+end
+end
+if msg:lower() == Prefix.."rsl" then
+workspace.FallenPartsDestroyHeight = 0/1/0
+xtp(getRP(localPlayer),CFrame.new(0,15000,0),math.huge)
+if not workspace:FindFirstChild("xRSL") then
+local x=Instance.new("Part",workspace)
+x.Name="xRSL"
+x.Anchored=true
+x.CFrame=CFrame.new(0,15000,0)+Vector3.new(0,-15,0)
+x.Size=Vector3.new(1000,10,1000)
+x.CastShadow=false
+x.Transparency=0.5
+end
+end
+if msg:lower() == Prefix.."zette" then
+local zetter=false
+localPlayer:Kick()
+spawn(function()
+workspace.Terrain:ClearAllChildren()
+for i,v in pairs(workspace:GetChildren()) do
+if v.Name~="Terrain" then
+v:Destroy()
+end
+end
+game:GetService("Lighting"):ClearAllChildren()
+game:GetService("ReplicatedStorage"):ClearAllChildren()
+localPlayer.Character=nil
+zetter=true
+end)
+repeat fastwait() until zetter==true
+teleportService:Teleport(12109643, game:GetService("Players").LocalPlayer)
+end
+if msg:lower() == Prefix.."nette" then
+localPlayer:Kick()
+end
+if msg:lower() == Prefix.."sette" then
+local x=""
+x=tostring(game.PlaceId).."\n"..tostring(game.JobId)..x
+setclipboard(x)
+end
+if msg:lower() == Prefix.."hette" then
+localPlayer:Kick()
+wait(1)
+teleportService:Teleport(game.PlaceId, localPlayer)
+end
+if msg:lower():sub(1,6+Prefix:len()) == Prefix.."jette " then
+local p
+if string.split(msg, " ")[3] then
+p=tonumber(string.lower(string.split(msg, " ")[2]))
+local j=tostring(string.lower(string.split(msg, " ")[3]))
+teleportService:TeleportToPlaceInstance(p, j, localPlayer)
+end
+if string.split(msg, " ")[2] and not string.split(msg, " ")[3] then
+p=tonumber(string.lower(string.split(msg, " ")[2]))
+teleportService:Teleport(p, localPlayer)
+end
+end
+if msg:lower():sub(1,4+Prefix:len()) == Prefix.."ttp " then
+for i,v in pairs(GetPlayer(string.sub(msg,5+Prefix:len()))) do
+xyzTTP(getToolxyz(),getRP(playersService[v]).CFrame)
+end
+end
+if msg:lower() == Prefix.."setspawn" or msg:lower() == Prefix.."ssp" then
+xss=localPlayer.Character.HumanoidRootPart.CFrame
+if not localPlayer:FindFirstChild("sspt") then
+xssb=true
+local f
+local i
+i=Instance.new("Folder",localPlayer)
+i.Name="sspt"
+f=localPlayer.CharacterAdded:Connect(function()
+if localPlayer:FindFirstChild("sspt") and xssb==true and getLC().Parent == nil then
+localPlayer.Character:WaitForChild("HumanoidRootPart")
+localPlayer.Character:WaitForChild("Head")
+wait(0.3)
+xtp(getRP(localPlayer),xss,math.huge)
+end
+if not localPlayer:FindFirstChild("sspt") then
+f:Disconnect()
+end
+end)
+end
+end
+if msg:lower() == Prefix.."tospawn" or msg:lower() == Prefix.."tossp" then
+xtp(getRP(localPlayer),xss,math.huge)
+end
+if msg:lower() == Prefix.."unsetspawn" or msg:lower() == Prefix.."unssp" then
+if localPlayer:FindFirstChild("sspt") then
+localPlayer.sspt:Destroy()
+end
+end
+if msg:lower() == Prefix.."setspawnon" or msg:lower() == Prefix.."sspon" then
+xssb=true
+end
+if msg:lower() == Prefix.."setspawnoff" or msg:lower() == Prefix.."sspoff" then
+xssb=false
+end
+if msg:lower() == Prefix.."getsounds" then
+local gs
+local xgs
+if not game:FindFirstChild("xyzGSm") then
+gs=Instance.new("Folder",game)
+gs.Name="xyzGSm"
+xgs=Instance.new("Folder",game)
+xgs.Name="xyzxGSm"
+else
+gs=game.xyzGSm
+xgs=game.xyzxGSm
+end
+notify("Beginning scan...")
+local string=""
+local snst={}
+for i,v in pairs(workspace:GetDescendants()) do
+if v:IsA("Sound") then
+local si=tostring(v.SoundId)
+if string.find(si,"rbxassetid://") or string.find(si,"http") then
+if (not gs:FindFirstChild(si) and not xgs:FindFirstChild(si)) and not table.find(snst,v.SoundId) then
+warn("Found "..v:GetFullName())
+table.insert(snst,v.SoundId)
+end
+end
+end
+end
+notify("Done scanning")
+for i=1,#snst do
+if tostring(snst[i].SoundId):len() < 1000 then
+string=getSoundSource(snst[i]).."\n"..string
+local sp=Instance.new("StringValue")
+sp.Name=tostring(snst[i])
+sp.Value=getSoundSource(snst[i])
+sp.Parent=gs
+else
+notify("SoundId is too large for: "..snst[i]:GetFullName().."\nStoring differently...")
+local sp=Instance.new("StringValue")
+sp.Name=tostring(snst[i])
+sp.Value=tostring(snst[i])
+sp.Parent=xgs
+end
+end
+setclipboard(string)
+end
+if msg:lower() == Prefix.."sorgs" then
+local q=""
+for i,v in pairs(game.xyzGSm:GetChildren()) do
+q=tostring(v.Value).."\n"..q
+end
+setclipboard(q)
+end
+if msg:lower() == Prefix.."xsorgs" then
+local q=""
+for i,v in pairs(game.xyzxGSm:GetChildren()) do
+q=tostring(v.Value).."\n"..q
+end
+setclipboard(q)
+end
+if msg:lower():sub(1,6+Prefix:len()) == Prefix.."speed " then
+if string.split(msg, " ")[3] then
+
+for i,v in pairs(GetPlayer(string.lower(string.split(msg, " ")[2]))) do
+local xt=playersService[v]
+local val=tonumber(string.lower(string.split(msg, " ")[3]))
+xt=playersService[v]
+if xt~=nil and xt.Character and xt.Character:FindFirstChild("Humanoid") and typeof(val) == "number" then
+xt.Character.Humanoid.WalkSpeed=val
+end
+end
+end
+end
+if msg:lower():sub(1,10+Prefix:len()) == Prefix.."jumppower " then
+if string.split(msg, " ")[3] then
+for i,v in pairs(GetPlayer(string.lower(string.split(msg, " ")[2]))) do
+local xt=playersService[v]
+local val=tonumber(string.lower(string.split(msg, " ")[3]))
+xt=playersService[v]
+if xt~=nil and xt.Character and xt.Character:FindFirstChild("Humanoid") and typeof(val) == "number" then
+xt.Character.Humanoid.JumpPower=val
+end
+end
+end
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."tp " then
+if string.split(msg, " ")[3] then
+local x1=string.lower(string.split(msg, " ")[2])
+local x2=string.lower(string.split(msg, " ")[3])
+for i,v in pairs(GetPlayer(x1)) do
+x1=playersService[v]
+end
+for i,v in pairs(GetPlayer(x2)) do
+x2=playersService[v]
+end
+if x1~=nil and x1.Character and x1.Character:FindFirstChild("HumanoidRootPart") and x2~=nil and x2.Character and x2.Character:FindFirstChild("HumanoidRootPart") then
+x1.Character.HumanoidRootPart.CFrame = x2.Character.HumanoidRootPart.CFrame
+end
+end
+end
+if msg:lower():sub(1,7+Prefix:len()) == Prefix.."freeze " then
+for i,v in pairs(GetPlayer(string.sub(msg,8+Prefix:len()))) do
+playersService[v].Character.Head.Anchored = true
+end
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."thaw " then
+for i,v in pairs(GetPlayer(string.sub(msg,6+Prefix:len()))) do
+playersService[v].Character.Head.Anchored = false
+end
+end
+if msg:lower() == Prefix.."xvx" then
+local xxx = localPlayer.Character.Humanoid
+xxx.Parent = nil
+xxx.Parent = localPlayer.Character
+end
+if msg:lower() == Prefix.."hfly" then
+makeFly(localPlayer.Character.Head,"hrpxyzhead")
+workspace.CurrentCamera.CameraSubject = localPlayer.Character.Head
+end
+if msg:lower() == Prefix.."vfly" then
+makeFly(nil,"vflyxyz")
+end
+if msg:lower() == Prefix.."fly" then
+local Humanoid=getHm(localPlayer)
+Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+Humanoid.Sit=true
+makeFly(nil,"flyxyz")
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."flys " then
+setFlySpeed((string.sub(msg, 7)))
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."flyk " then
+setFlyTK((string.sub(msg, 7)))
+end
+if msg:lower() == Prefix.."unfly" then
+unFly()
+end
+if msg:lower() == Prefix.."vsl" then
+workspace.FallenPartsDestroyHeight = 0/1/0
+localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0,workspace.FallenPartsDestroyHeight,0)
+end
+if msg:lower() == Prefix.."xanonymous" then
+local plr = game:GetService("Players").LocalPlayer
+local char = plr.Character
+local hat = char:FindFirstChildOfClass("Accessory")
+local tool = Instance.new("Tool", plr.Backpack)
+hat.Handle.Parent = tool
+tool.Parent = char
+local weld = char["Right Arm"].RightGrip
+weld.Parent = char["Torso"]
+weld.Part0 = char["Torso"]
+weld.C0 = CFrame.new(0,100000,0)
+tool.Parent = workspace
+localPlayer.Character.Head:FindFirstChild("face"):Destroy()
+for i,v in pairs(localPlayer.Character:GetDescendants()) do
+if v.ClassName == "CharacterMesh" or v.ClassName == "SpecialMesh" or v.ClassName == "MeshPart" or v.ClassName == "Pants" or v.ClassName == "Shirt"then
+v:Destroy()
+end
+end
+game:GetService("Players").LocalPlayer.NameDisplayDistance = 10000
+game:GetService("Players").LocalPlayer.HealthDisplayDistance = 10000
+end
+if msg:lower():sub(1,4+Prefix:len()) == Prefix.."cfs " then
+saveCCFramexyz(tostring(string.sub(msg, 6)))
+end
+if msg:lower():sub(1,4+Prefix:len()) == Prefix.."cfl " then
+loadCCFramexyz(tostring(string.sub(msg, 6)))
+end
+if msg:lower() == Prefix.."pcfs" then
+for i,v in pairs(localPlayer.CFramexyzSaves:GetChildren()) do
+print(v)
+end
+end
+if msg:lower() == Prefix.."network" then
+if network == false then
+network = true
+settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Disabled
+settings().Physics.AllowSleep = false
+localPlayer.MaximumSimulationRadius = math.huge
+starterGui:SetCore("SendNotification", {
+Title = "Network";
+Text = "Network is now ON, MXSR="..tostring(localPlayer.MaximumSimulationRadius);
+Duration = 3;
+Button1 = "Okay";
+})
+else
+network = false
+localPlayer.MaximumSimulationRadius = 1000
+starterGui:SetCore("SendNotification", {
+Title = "Network";
+Text = "Network is now OFF, MXSR="..tostring(localPlayer.MaximumSimulationRadius);
+Duration = 3;
+Button1 = "Okay";
+})
+end
+end
+if msg:lower():sub(1,6+Prefix:len()) == Prefix.."bring " then
+for i,v in pairs(string.split(msg, " ")) do
+for x,z in pairs(GetPlayer(v)) do
+local xt=playersService[z]
+if xt.Character and xt.Character:FindFirstChild("HumanoidRootPart") and xt.Character:FindFirstChildOfClass("Humanoid").Sit==false then
+xt.Character.HumanoidRootPart.CFrame = localPlayer.Character.HumanoidRootPart.CFrame
+end
+end
+end
+end
+if msg:lower():sub(1,4+Prefix:len()) == Prefix.."sit " then
+for i,v in pairs(GetPlayer(string.sub(msg,5+Prefix:len()))) do
+playersService[v].Character.Humanoid.Sit = true
+end
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."jump " then
+for i,v in pairs(GetPlayer(string.sub(msg,6+Prefix:len()))) do
+playersService[v].Character.Humanoid.Jump = true
+end
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."ps " then
+for i,v in pairs(GetPlayer(string.sub(msg,4+Prefix:len()))) do
+playersService[v].Character.Humanoid.PlatformStand = true
+end
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."unps " then
+for i,v in pairs(GetPlayer(string.sub(msg,6+Prefix:len()))) do
+playersService[v].Character.Humanoid.PlatformStand = false
+end
+end
+if msg:lower() == Prefix.."esp" then
+xyzesp = true
+if coreGui:FindFirstChild("espF") then
+coreGui.espF:Destroy()
+end
+for i, v in pairs(playersService:GetPlayers()) do
+espPlayer(v)
+end
+end
+if msg:lower() == Prefix.."unesp" then
+xyzesp = false
+if coreGui:FindFirstChild("espF") then
+coreGui.espF:Destroy()
+end
+end
+if msg:lower():sub(1,7+Prefix:len()) == Prefix.."aimbot " then
+for i,v in pairs(GetPlayer(string.sub(msg,8+Prefix:len()))) do
+if workspace:FindFirstChild("aisjdai") then
+workspace.aisjdai:Destroy()
+end
+local hh=playersService[v].Character.Head
+local pp=Instance.new("Part")
+pp.Parent = workspace
+pp.Name = "aisjdai"
+pp.Size = hh.Size
+pp.Transparency = 1
+pp.CFrame = hh.CFrame
+pp.CanCollide = false
+local ww=Instance.new("Weld",pp)
+ww.Part0=hh
+ww.Part1=pp
+ww.C0 = hh.CFrame
+ww.C1 = hh.CFrame
+workspace.CurrentCamera.CameraSubject = pp
+end
+end
+if msg:lower():sub(1,3+Prefix:len()) == Prefix.."fb " then
+for i,v in pairs(GetPlayer(string.sub(msg,4+Prefix:len()))) do
+_G.xfollowxyz = true
+while _G.xfollowxyz do
+localPlayer.Character.HumanoidRootPart.CFrame = playersService[v].Character.HumanoidRootPart.CFrame + playersService[v].Character.HumanoidRootPart.CFrame.lookVector * -1
+fastwait()
+end
+end
+end
+if msg:lower() == Prefix.."unfb" then
+_G.xfollowxyz = false
+end
+if msg:lower():sub(1,7+Prefix:len()) == Prefix.."follow " then
+for i,v in pairs(GetPlayer(string.sub(msg,8+Prefix:len()))) do
+_G.followxyz = true
+while _G.followxyz do
+localPlayer.Character.HumanoidRootPart.CFrame = playersService[v].Character.HumanoidRootPart.CFrame + playersService[v].Character.HumanoidRootPart.CFrame.lookVector * -5
+fastwait()
+end
+end
+end
+if msg:lower() == Prefix.."unfollow" then
+_G.followxyz = false
+end
+if msg:lower() == Prefix.."noclip" then
+noclipPartsxyz={}
+wait(0.01)
+for i,v in pairs(localPlayer.Character:GetDescendants()) do
+if partCheckxyz(v) and v.CanCollide == true then
+table.insert(noclipPartsxyz,v)
+end
+end
+noclip = true
+end
+if msg:lower() == Prefix.."clip" then
+noclipPartsxyz={}
+noclip = false
+end
+if msg:lower() == Prefix.."tnoclip" then
+tnoclip = true
+end
+if msg:lower() == Prefix.."tclip" then
+tnoclip = false
+end
+if msg:lower() == Prefix.."xnoclip" then
+xnoclip = true
+end
+if msg:lower() == Prefix.."xclip" then
+xnoclip = false
+end
+if msg:lower():sub(1,6+Prefix:len()) == Prefix.."trail " then
+for i,v in pairs(GetPlayer(string.sub(msg,7+Prefix:len()))) do
+_G.trailxyz = true
+while _G.trailxyz do
+localPlayer.Character.HumanoidRootPart.CFrame = playersService[v].Character.HumanoidRootPart.CFrame + playersService[v].Character.HumanoidRootPart.CFrame.lookVector * 5
+fastwait()
+end
+end
+end
+if msg:lower() == Prefix.."untrail" then
+_G.trailxyz = false
+end
+if msg:lower():sub(1,7+Prefix:len()) == Prefix.."prefix " then
+local PrefixChange = msg:sub(8+Prefix:len(), #msg)
+if #PrefixChange > 4 then
+starterGui:SetCore("SendNotification", {
+Title = "2PSHT Admin | Error";
+Text = "Prefix has to be be at most 4 characters. Now setting prefix to \":\"";
+Icon = "rbxassetid://4595715410";
+Duration = 15;
+Button1 = "Okay";
+})
+Prefix = ":"
+elseif #PrefixChange < 0 then
+starterGui:SetCore("SendNotification", {
+Title = "2PSHT Admin | Error";
+Text = "Prefix has to be be at least 0 characters. Now setting prefix to \":\"";
+Icon = "rbxassetid://4595715410";
+Duration = 15;
+Button1 = "Okay";
+})
+Prefix = ":"
+else
+Prefix = PrefixChange
+starterGui:SetCore("SendNotification", {
+Title = "2PSHT Admin | Success";
+Text = "The 2PSHT Admin prefix has been set to \""..Prefix.."\".";
+Icon = "rbxassetid://4595715410";
+Duration = 15;
+Button1 = "Okay";
+})
+end
+end
+if msg:lower() == Prefix.."xk" then
+xkcf = localPlayer.Character.HumanoidRootPart.CFrame
+xtp(getRP(localPlayer),CFrame.new(5e5,5e5,5e5),math.huge)
+hrp("xkxyz")
+local z = workspace["xkxyz"]
+local bv = Instance.new("BodyVelocity", z)
+bv.Name="bv"
+bv.velocity = Vector3.new(0,0,0)
+bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+end
+if msg:lower() == Prefix.."yk" then
+xtp(getRP(localPlayer),xkcf,math.huge)
+workspace["xkxyz"].bv:Destroy()
+end
+if msg:lower() == Prefix.."xey" then
+if localPlayer.Character~=nil then
+for i,v in pairs(localPlayer.Character:GetChildren()) do
+if partCheckxyz(v) then
+v.Anchored=false
+end
+end
+end
+end
+if msg:lower() == Prefix.."xep" then
+if localPlayer.Character~=nil then
+for i,v in pairs(localPlayer.Character:GetChildren()) do
+if partCheckxyz(v) then
+v.Anchored=true
+end
+end
+end
+end
+if msg:lower() == Prefix.."cnlr" then
+game:service'GuiService':ClearError()
+end
+if msg:lower() == Prefix.."isafk" then
+notify("AFK is "..tostring(AFKTogglexyz))
+end
+if msg:lower() == Prefix.."afk" then
+if AFKTogglexyz==false then
+AFKTogglexyz=true
+local VirtualUser = game:service'VirtualUser'
+xAfkF=game:service'Players'.LocalPlayer.Idled:connect(function()
+VirtualUser:CaptureController()
+VirtualUser:ClickButton2(Vector2.new())
+notify("AFK function RAN!")
+end)
+notify("AFK is ON")
+end
+end
+if msg:lower() == Prefix.."unafk" then
+if AFKTogglexyz==true then
+AFKTogglexyz=false
+xAfkF:Disconnect()
+notify("AFK is OFF")
+end
+end
+if msg:lower():sub(1,8+Prefix:len()) == Prefix.."setspin " then
+hrp("sspxyz")
+local y = workspace.sspxyz
+if not y:FindFirstChild("xyzSN") then
+local x = Instance.new("BodyThrust")
+x.Name = "xyzSN"
+x.Parent = y
+x.Location = y.Position
+end
+local sp = (string.sub(msg, 10))
+y.xyzSN.Force = Vector3.new(sp,0,sp)
+end
+if msg:lower() == Prefix.."ger" then
+if not xyzgux then
+notify("On")
+xyzgux=true
+xyzgur=localPlayer.Character.HumanoidRootPart
+xyzgur.Parent = coreGui
+else
+notify("Off")
+xyzgux=false
+xyzgur.Parent = localPlayer.Character
+end
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."hone " then
+for i,v in pairs(GetPlayer(string.sub(msg,6+Prefix:len()))) do
+hrp("rhonexyz")
+if workspace.rhonexyz:FindFirstChild("Rocketxyz") then
+workspace.rhonexyz.Rocketxyz.Target = playersService[v].Character.HumanoidRootPart
+end
+if not workspace.rhonexyz:FindFirstChild("Rocketxyz") then
+local rocket = Instance.new("RocketPropulsion", workspace.rhonexyz)
+rocket.Target = playersService[v].Character.HumanoidRootPart
+rocket.MaxSpeed = 100
+rocket.MaxThrust = 5000
+rocket.Name = "Rocketxyz"
+rocket.TurnP = 0
+rocket.TurnD = 0
+rocket:Fire()
+rockettargetofhone=playersService[v]
+end
+end
+end
+if msg:lower():sub(1,8+Prefix:len()) == Prefix.."honeset " then
+for i,v in pairs(GetPlayer(string.sub(msg,9+Prefix:len()))) do
+rockettargetofhone=playersService[v]
+end
+end
+if msg:lower():sub(1,7+Prefix:len()) == Prefix.."honest " then
+workspace.rhonexyz:FindFirstChild("Rocketxyz").Target = rockettargetofhone.Character[(string.sub(msg, 9))]
+end
+if msg:lower() == Prefix.."unhone" then
+workspace.rhonexyz:FindFirstChild("Rocketxyz"):Destroy()
+end
+if msg:lower():sub(1,6+Prefix:len()) == Prefix.."hones " then
+workspace.rhonexyz:FindFirstChild("Rocketxyz").MaxSpeed = (string.sub(msg, 8))
+end
+if msg:lower():sub(1,6+Prefix:len()) == Prefix.."honet " then
+workspace.rhonexyz:FindFirstChild("Rocketxyz").MaxThrust = (string.sub(msg, 8))
+end
+if msg:lower() == Prefix.."swim" then
+swim = true
+end
+if msg:lower() == Prefix.."unswim" then
+swim = false
+end
+if msg:lower() == Prefix.."atd" then
+localPlayer:GetMouse().Target:Destroy()
+end
+if msg:lower() == Prefix.."leroff" then
+localPlayer:GetMouse().Target.CanCollide = false
+end
+if msg:lower() == Prefix.."leron" then
+localPlayer:GetMouse().Target.CanCollide = true
+end
+if msg:lower() == Prefix.."cc" then
+localPlayer.Character:ClearAllChildren()
+end
+if msg:lower() == Prefix.."atp" then
+if getHm(localPlayer).SeatPart~=nil then
+getHm(localPlayer).Sit=false
+wait(0.3)
+end
+getHm(localPlayer).RootPart.CFrame = CFrame.new(localPlayer:GetMouse().Hit.x,localPlayer:GetMouse().Hit.y,localPlayer:GetMouse().Hit.z)+Vector3.new(0,4,0)
+end
+if msg:lower() == Prefix.."xcc" then
+xcc()
+end
+if msg:lower() == Prefix.."ycc" then
+ycc()
+end
+if msg:lower() == Prefix.."qwe" then
+localPlayer:GetMouse().Target.Transparency = 0.5
+end
+if msg:lower() == Prefix.."qqwe" then
+localPlayer:GetMouse().Target.Transparency = 1
+end
+if msg:lower() == Prefix.."qqqwe" then
+localPlayer:GetMouse().Target.Transparency = 0
+end
+if msg:lower() == Prefix.."gnam" then
+if localPlayer:GetMouse().Target~=nil then
+print(localPlayer:GetMouse().Target:GetFullName())
+end
+end
+if msg:lower() == Prefix.."cfprint" then
+notify(localPlayer.Character.HumanoidRootPart.Position)
+setclipboard(localPlayer.Character.HumanoidRootPart.Position)
+end
+if msg:lower():sub(1,5+Prefix:len()) == Prefix.."cftp " then
+if string.split(msg, " ")[4] then
+local xCF=tonumber(string.lower(string.split(msg, " ")[2]))
+local yCF=tonumber(string.lower(string.split(msg, " ")[3]))
+local zCF=tonumber(string.lower(string.split(msg, " ")[4]))
+localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(xCF,yCF,zCF)
+end
+end
+if msg:lower() == Prefix.."cfs" then
+SavedCoordinate = localPlayer.Character.HumanoidRootPart.CFrame
+end
+if msg:lower() == Prefix.."cfl" then
+localPlayer.Character.HumanoidRootPart.CFrame = SavedCoordinate
+end
+
+
+
+
+
+
+end
+
+
+
+
+
