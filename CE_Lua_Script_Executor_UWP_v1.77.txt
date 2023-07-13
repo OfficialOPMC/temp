@@ -1,0 +1,1638 @@
+--These will need to be updated to work
+local DownloadCompiler = true--Download Epix's Compiler. Set to false if you don't wanna download exe files. You can't use rloadstring with Cheat Engine without it.
+local TaskSchedulerAddress = 'Windows10Universal.exe+332B8D4'
+local SetParentAddress = 'Windows10Universal.exe+3DAA40'
+local SetNameAddress = 'Windows10Universal.exe+1450DE7'
+local TextBoxCharacterLimit = 'Windows10Universal.exe+2D22F4C'
+local CreateInstanceByNameFunctionAddress = 'Windows10Universal.exe+3D60A0'
+local StringDataRegion = 'Windows10Universal.exe+2F87BFC'
+local LuaVMLoadFunctionAddress = 'Windows10Universal.exe+55D430'--Thanks to YT (UserId: 1073140472639406080) for spoon feeding me the addresses and teaching how to find them LOL
+local GetStateFunctionAddress = 'Windows10Universal.exe+454B20'
+local Task_Defer_FunctionAddress = 'Windows10Universal.exe+49A010'
+local Lua_Top = 0x14
+local Name_Offset = 0x2C
+local Character_Offset = 0x84
+local RobloxExtraSpace_Offset = 0x48
+local Identity_Offset = 0x18
+
+--Optional, would only be needed if you are using CE Lua to play with FogEnd
+local FogEnd_Offset = 0xF8
+
+
+
+function xyzSpawnThread(functionZ,keep)
+local CreatedThread
+CreatedThread = createThread(function(Thread)
+functionZ()
+if keep == false then
+CreatedThread.terminate()
+end
+end)
+return CreatedThread
+end
+
+function table.find(tableA,comparedValue)
+local x=tableA
+local y=comparedValue
+for i=1,#x do
+if x[i]==y then
+return i
+end
+end
+end
+
+function table.rid(tableA,comparedValue)
+local x=tableA
+local y=comparedValue
+while table.find(x,y) do
+for i=1,#x do
+if x[i]==y then
+table.remove(x,i)
+end
+end
+end
+end
+
+function table.merge(Table1,Table2,AllowDuplicates)
+local x = Table1
+local y = Table2
+for i,v in pairs(y) do
+if AllowDuplicates then
+x[#x+1] = v
+else
+if not table.find(x,v) then
+x[#x+1] = v
+end
+end
+end
+return x
+end
+
+function table.foreach(tableA,functionZ)
+local x=tableA
+for i=1,#x do
+functionZ(x[i])
+end
+end
+
+function yieldForHookA(baseaddress)
+local x=getAddressList().createMemoryRecord()
+local y=baseaddress
+local z=tonumber(x.Value)
+x.setAddress(y)
+x.Description=tostring(y).." Yielder"
+print("Yielding Hook "..tostring(y))
+repeat z=readBytes(x.Address) Sleep(1) until z~=nil and z~=0
+print("Done Yielding "..tostring(y))
+x.destroy()
+end
+
+function createMemoryRecord(desc,type,parent)
+local NewMemoryRecord = getAddressList().createMemoryRecord()
+NewMemoryRecord.Description = tostring(desc)
+if type ~= nil then
+NewMemoryRecord.Type = type
+end
+if parent ~= nil then
+NewMemoryRecord.appendToEntry(parent)
+end
+return NewMemoryRecord
+end
+
+function createAutoAssembler(desc,source,active,parent)
+local AutoAssemblerInstance = createMemoryRecord(tostring(desc),vtAutoAssembler,nil)
+AutoAssemblerInstance.Script = source
+AutoAssemblerInstance.Active = active
+if parent ~= nil then
+AutoAssemblerInstance.appendToEntry(parent)
+end
+return AutoAssemblerInstance
+end
+
+function createAddress(desc,addr,type,parent)
+local Address = createMemoryRecord(tostring(desc),type,parent)
+Address.setAddress(addr)
+if type ~= nil then
+Address.Type = type
+end
+if parent ~= nil then
+Address.appendToEntry(parent)
+end
+return Address
+end
+
+function createGroup(desc,parent)
+local NewGroup = createMemoryRecord(tostring(desc),nil,parent)
+NewGroup.isGroupHeader = true
+NewGroup.options = "[moHideChildren, moAllowManualCollapseAndExpand]"
+NewGroup.Active = false
+if parent ~= nil then
+NewGroup.appendToEntry(parent)
+end
+return NewGroup
+end
+
+function getABD(des,warnr)
+if getAddressList().getMemoryRecordByDescription(tostring(des)) ~= nil then
+return getAddressList().getMemoryRecordByDescription(tostring(des))
+else
+if warnr==true then
+print("WARNING: No such address found for description: "..tostring(des))
+end
+return false
+end
+end
+
+function getChildren(group,Fun)
+assert(type(Fun) == "function")
+for i=0,group.Count-1 do
+Fun(group.Child[i])
+end
+end
+
+function d2h(src,bitwide)
+   if type(src)~="number" then
+if type(src)=="string" then
+return src
+end
+      print("Warning!: Input isn't a number: "..tostring(src))
+      return src
+   end
+   bitwide=bitwide or 0xffffffff
+   return(string.format("%X",bAnd(tonumber(src),bitwide)))
+end
+
+function h2d(src)
+   if type(src)~="string" then
+if type(src)=="number" then
+return src
+end
+      print("Warning!: Input isn't a string: "..tostring(src))
+      return src
+   end
+   return tonumber(tostring(src), 16)
+end
+
+
+function isEven(Number)
+if (Number % 2 == 0) then
+return true
+else
+return false
+end
+end
+
+function isOdd(Number)
+if (Number % 2 ~= 0) then
+return true
+else
+return false
+end
+end
+
+function getProcessNameFromID(processId)
+  local processName = nil
+  local list = createStringlist()
+  getProcesslist(list)
+  for i = 0, list.Count-1 do
+    local id, name = list.String[i]:match("(.*)-(.*)")
+    if processId == tonumber(id, 16) then
+      processName = name
+      break
+    end
+  end
+  return processName
+end
+
+function getProcessIDsWithName(ProcessName)
+  local list = createStringlist()
+  local matched = {}
+  getProcesslist(list)
+  for i = 0, list.Count-1 do
+    local id, name = list.String[i]:match("(.*)-(.*)")
+    if ProcessName == name then
+      table.insert(matched,tonumber(id, 16))
+    end
+  end
+  return matched
+end
+
+local PR_id = getOpenedProcessID()
+local PR_name = getProcessNameFromID(PR_id)
+local pid
+local base
+function getRBase()
+return base
+end
+if PR_name ~= nil and PR_name == "Windows10Universal.exe" then
+print("Using current Roblox client that is attached")
+pid = PR_id
+base = getAddress(enumModules(pid)[1].Name);
+else
+print("Attempting to attach to a Roblox client")
+local RobloxProcesses = getProcessIDsWithName("Windows10Universal.exe");
+pid = RobloxProcesses[1]
+if pid == nil then
+local errorM=[[Unable to find Microsoft Store Roblox. Open Roblox from the Microsoft Store first and then execute the script.]]
+print(errorM)
+speak(errorM)
+return
+end
+openProcess(pid);
+base = getAddress(enumModules(pid)[1].Name);
+end
+
+print("Successfully attached to Roblox!")
+
+
+
+function ccXL(hexString,AllowOdd)--Ensures equal length hex string
+local x = hexString:gsub('0x',''):gsub(' ','')
+if not AllowOdd then
+if isOdd(x:len()) then
+x = '0'..x
+end
+end
+return x
+end
+
+function LEX_AD(hexString)--Little Endian hex string, reverse op codes
+local x = ccXL(hexString)
+local y = {}
+local z = ""
+for i = 1, x:len(),2 do
+table.insert(y,x:sub(i,i+1))
+end
+for i = #y, 1, -1 do
+z = z..y[i]
+end
+return z
+end
+
+function gethexc(hexString)
+local count = 0
+if hexString == nil then
+return 0
+end
+for i = 1, hexString:len(),2 do
+count = count + 1
+end
+return count
+end
+
+function CalcJmp(Dst,Cur)
+local x = (h2d(Dst) - h2d(Cur)) - 5
+return d2h(x)
+end
+
+function GetStartOfFunction(FunctionRegionAddress)
+local x = getAddress(FunctionRegionAddress)
+local y = 0
+for i=1,3000 do
+x = x - 1
+if select(2,splitDisassembledString(disassemble(getAddress(x)))) == 'push ebp' and select(2,splitDisassembledString(disassemble(getAddress(x+1)))) == 'mov ebp,esp' then
+return x
+end
+end
+end
+
+function ByteTableToHexString(ByteTable)
+local HexTable = {}
+if ByteTable == nil then
+return {}
+end
+if #ByteTable == 0 then
+return {}
+end
+for i=1,#ByteTable do
+table.insert(HexTable,ccXL(d2h(ByteTable[i])))
+end
+local HexString = ''
+for i=1,#HexTable do
+HexString = HexString..HexTable[i]
+end
+return HexString
+end
+
+function HexStringToNumberTable(hexString)
+local x = ccXL(hexString,true)
+local y = {}
+for i = 1, x:len(),2 do
+table.insert(y,h2d(x:sub(i,i+1)))
+end
+return y
+end
+
+function FwriteBytes(Address,ByteTable)
+local x = getAddress(Address)
+for i=1,#ByteTable do
+writeBytes(x,ByteTable[i])
+x = x + 1
+end
+end
+
+function isAddressPointer(Address)
+if not readInteger(Address) then
+return false
+end
+local AddressPointed = readInteger(readInteger(getAddress(Address)))
+if AddressPointed == nil then
+return false
+else
+return true
+end
+end
+
+function DRP(Pointer)
+return readPointer(getAddress(Pointer))
+end
+
+function stringHexArray(stringCC)
+local stringHexed = ''
+for i=1,string.len(stringCC) do
+local Hex = d2h(string.byte(string.sub(stringCC,i,i)))
+if string.len(Hex) == 1 then
+Hex = '0'..Hex
+end
+stringHexed = stringHexed..Hex
+end
+return stringHexed
+end
+
+function hexArrayString(hexArrayCC)
+local stringRaw = ''
+for i=1,string.len(hexArrayCC),2 do
+local Char = string.char(h2d(string.sub(hexArrayCC,i,i+1)))
+stringRaw = stringRaw..Char
+end
+return stringRaw
+end
+
+function ReadRobloxString(ExpectedAddress)
+local StringCount = readInteger(ExpectedAddress + 0x10)
+if StringCount > 15 then
+return readString(DRP(ExpectedAddress),StringCount)
+end
+return readString(ExpectedAddress,StringCount)
+end
+
+
+function isValidTask(TaskInstanceAddress)
+local x = TaskInstanceAddress
+if isAddressPointer(x) == false then
+return false
+end
+local y = DRP(x)
+local a = y
+local b = a + 0x8
+local c = a + 0xC
+if DRP(b) == a and isAddressPointer(a) and isAddressPointer(b) and isAddressPointer(c) then
+return true
+end
+return false
+end
+
+function GetTaskName(TaskInstanceAddress)
+local x = TaskInstanceAddress
+if isValidTask(x) == false then
+return false
+end
+local y = DRP(x)
+local z = y + 0x10
+return ReadRobloxString(z)
+end
+
+function TaskSchedulerGetJobs()
+local DynamicTaskScheduler = DRP(GetTaskScheduler())
+local JobStart = 0x134
+local JobEnd = 0x138
+local OffsetsPerJob = 8
+local Count = 0
+local CurrentJob = DRP(DynamicTaskScheduler + JobStart)
+local JobEndAddress = DRP(DynamicTaskScheduler + JobEnd)
+local Jobs = {}
+
+while true do
+if Count > 1000 then
+print("Count too big in TaskSchedulerGetJobs! Breaking...")
+break
+end
+if CurrentJob == JobEndAddress then
+break
+end
+table.insert(Jobs,CurrentJob)
+CurrentJob = CurrentJob + 8
+Count = Count + 1
+end
+
+return Jobs
+end
+
+function TaskSchedulerFindFirstJob(JobName)
+local Jobs = TaskSchedulerGetJobs()
+for i=1,#Jobs do
+if GetTaskName(Jobs[i]) == JobName then
+return Jobs[i]
+end
+end
+end
+
+
+
+function GetFPS()
+return 1/readDouble(DRP(TaskSchedulerAddress)+0x118)
+end
+
+
+function SetFPS(Count)
+writeDouble(DRP(TaskSchedulerAddress)+0x118,1/tonumber(Count))
+end
+
+
+function GetTaskScheduler()
+return TaskSchedulerAddress
+end
+
+
+
+function isTaskSchedulerAddress(Address,isDynamic)
+local CurrentAddress = getAddress(Address)
+if isAddressPointer(CurrentAddress) or isDynamic == true then
+local TaskScheduler = CurrentAddress
+local DynamicTaskScheduler
+if isDynamic then
+DynamicTaskScheduler = CurrentAddress
+else
+DynamicTaskScheduler = DRP(TaskScheduler)
+end
+local ChildrenStart = DynamicTaskScheduler + 0x134
+local LastChild = DynamicTaskScheduler + 0x138
+local PointerX = DynamicTaskScheduler + 0x130
+local PointerY = DynamicTaskScheduler + 0x13C
+if isAddressPointer(ChildrenStart) and isAddressPointer(LastChild) and isAddressPointer(PointerX) and isAddressPointer(PointerY) then
+local FirstChild = DRP(DynamicTaskScheduler + 0x134)
+if isAddressPointer(FirstChild) then
+if DRP(DRP(FirstChild) + 0x8) == DRP(FirstChild) then
+if readDouble(DynamicTaskScheduler + 0x8) == 0.05 then
+return true
+end
+end
+end
+end
+end
+return false
+end
+
+
+if not isTaskSchedulerAddress(GetTaskScheduler()) then
+local x = 'Task Scheduler Address is not valid. This means that Roblox has updated and you are using an outdated script. Or, it means that you are not using the latest version of Roblox. Seek help!'
+speak(x)
+assert(false,x)
+end
+
+
+
+function GetDataModelFromNetPeerSend()
+local NPS = TaskSchedulerFindFirstJob("Net Peer Send")
+if not NPS then
+speak('Unable to load Exploit because not in a game. Join a Roblox game first and then execute the script.')
+assert(false,'Unable to load Exploit because not in a game. Join a Roblox game first and then execute the script.')
+end
+return DRP(DRP(NPS) + 0x28) - 8
+end
+
+
+local DataModel = GetDataModelFromNetPeerSend()
+
+local ClassName_Offset = 0xC
+
+function GetDataModelAddress()
+return getAddress(readInteger(getAddress(DataModel) + 0x14))
+end
+
+function GetDataModel()
+return DRP(getAddress(DataModel) + 0x14) + 4
+end
+
+function GetDataModelFromRawDataModel(RawDataModel)
+return getAddress(readInteger(getAddress(RawDataModel) + 0x14)) + 4
+end
+
+function CreateRobloxStringAddress(StringToWrite)
+local LengthOfString = string.len(StringToWrite)
+local NewMemoryRegion = allocateMemory(LengthOfString + 0x50)
+local StringAddressLocation = NewMemoryRegion
+local StringCountAddress = StringAddressLocation + 0x10
+if LengthOfString > 15 then
+writeInteger(StringAddressLocation,StringAddressLocation + 0x30)
+writeString(StringAddressLocation + 0x30,StringToWrite)
+writeInteger(StringCountAddress,LengthOfString)
+writeInteger(StringCountAddress + 4,31)
+else
+writeString(StringAddressLocation,StringToWrite)
+writeInteger(StringCountAddress,LengthOfString)
+writeInteger(StringCountAddress + 4,15)
+end
+return NewMemoryRegion
+end
+
+
+
+local Children_Offset = Name_Offset + 0x4
+local Parent_Offset = Children_Offset + 0x8
+
+
+
+function GetDataModelDataAddress()
+return DRP(getAddress(readInteger(h2d(DataModelAddress) + 0x3C) + 0x0))
+end
+
+function GetDataModelServices()
+local TableOfServices = {}
+local ServiceOffsetApart = 0x8
+local CurrentService = 0x0
+local DataModelDataAddress = DRP(DRP(GetDataModelAddress() + Children_Offset))
+local LoopedTimes = 0
+while true do
+if LoopedTimes > 100 then
+break
+end
+if isAddressPointer(getAddress(DataModelDataAddress) + CurrentService) == false then
+break
+end
+if isInstanceValid(getAddress(DataModelDataAddress) + CurrentService) == false then
+break
+end
+if isAddressPointer(getAddress(DataModelDataAddress) + CurrentService) == false or CurrentService > 0x2FF then
+break
+end
+if isInstanceValid(getAddress(DataModelDataAddress) + CurrentService) == true then
+table.insert(TableOfServices,getAddress(DataModelDataAddress) + CurrentService)
+end
+CurrentService = CurrentService + ServiceOffsetApart
+LoopedTimes = LoopedTimes + 1
+end
+return TableOfServices
+end
+
+
+function GetName(Instance,isPointer)
+if isPointer ~= false then
+if isInstanceValid(Instance) == false then
+return nil
+end
+local ExpectedAddress = DRP(DRP(Instance) + Name_Offset)
+return ReadRobloxString(ExpectedAddress)
+else
+if not Instance then
+return nil
+end
+if isInstanceValid(Instance + 0x4) == false then
+return nil
+end
+local ExpectedAddress = DRP(Instance + Name_Offset)
+return ReadRobloxString(ExpectedAddress)
+end
+end
+
+function GetClassName(Instance,isPointer)
+if isPointer ~= false then
+if isInstanceValid(Instance) == false then
+return nil
+end
+if isAddressPointer(readInteger(Instance)) == false then
+return nil
+end
+if readInteger(readInteger(readInteger(getAddress(DRP(Instance) + ClassName_Offset)) + 4) + 0x14) == nil then
+return nil
+end
+if readInteger(readInteger(readInteger(getAddress(DRP(Instance) + ClassName_Offset)) + 4) + 0x14) < 16 then
+return readString(readInteger(readInteger(getAddress(DRP(Instance) + ClassName_Offset)) + 4))
+else
+return readString(DRP(readInteger(readInteger(getAddress(DRP(Instance) + ClassName_Offset)) + 4)))
+end
+else
+if readInteger(readInteger(readInteger(getAddress(getAddress(Instance) + ClassName_Offset)) + 4) + 0x14) < 16 then
+return readString(readInteger(readInteger(getAddress(getAddress(Instance) + ClassName_Offset)) + 4))
+else
+return readString(DRP(readInteger(readInteger(getAddress(getAddress(Instance) + ClassName_Offset)) + 4)))
+end
+end
+end
+
+function isInstanceValid(Instance)
+if Instance == nil then
+return false
+end
+if getAddress(Instance) == nil or getAddress(Instance) == 0 then
+return false
+end
+if DRP(getAddress(Instance)) == nil or DRP(getAddress(Instance)) == 0 then
+return false
+end
+if isAddressPointer(Instance) == false then
+return false
+end
+if isAddressPointer(getAddress(DRP(Instance) + ClassName_Offset)) == false then
+return false
+end
+if DRP(DRP(getAddress(Instance)) + 4) ~= DRP(getAddress(Instance)) then
+return false
+end
+return true
+end
+
+function GetChildren(Instance)
+local ChildrenInstances = {}
+if isInstanceValid(Instance) == false then
+print("Getting Children failed because not valid.")
+return nil
+end
+local InstanceAddress = getAddress(Instance)
+local ChildrenAddress = DRP(InstanceAddress) + Children_Offset
+local ChildStartAddress = DRP(ChildrenAddress)
+local ChildEndAddress = DRP(ChildStartAddress + 0x4)
+local OffsetAddressPerChild = 0x8
+local CurrentChildAddress = DRP(DRP(ChildrenAddress))
+local LoopedTimes = 0
+if readInteger(ChildrenAddress) == 0 or readInteger(ChildrenAddress) == nil then
+return ChildrenInstances
+end
+while true do
+if LoopedTimes > 9000 then
+print("Too many Child, break called.")
+break
+end
+if (getAddress(CurrentChildAddress) == ChildEndAddress) or (CurrentChildAddress > (CurrentChildAddress + 0x7FF)) then
+break
+end
+if isInstanceValid(CurrentChildAddress) == true then
+table.insert(ChildrenInstances,DRP(CurrentChildAddress) + 4)
+end
+CurrentChildAddress = CurrentChildAddress + OffsetAddressPerChild
+LoopedTimes = LoopedTimes + 1
+end
+return ChildrenInstances
+
+end
+
+
+function GetDescendants(Instance)
+local DescendantChildren = {}
+local function LoopThroughChildren(InstanceChild)
+local ChildrenInstances = GetChildren(InstanceChild)
+if #ChildrenInstances > 0 then
+for i=1,#ChildrenInstances do
+if isInstanceValid(ChildrenInstances[i]) then
+table.insert(DescendantChildren,ChildrenInstances[i])
+LoopThroughChildren(ChildrenInstances[i])
+end
+end
+end
+end
+LoopThroughChildren(Instance)
+return DescendantChildren
+end
+
+function FindFirstDescendant(Instance,Name)
+local Found
+local function LoopThroughChildren(InstanceChild)
+if Found then
+return Found
+end
+local ChildrenInstances = GetChildren(InstanceChild)
+if #ChildrenInstances > 0 then
+for i=1,#ChildrenInstances do
+if isInstanceValid(ChildrenInstances[i]) then
+if GetName(ChildrenInstances[i]) == Name then
+Found = ChildrenInstances[i]
+return Found
+else
+LoopThroughChildren(ChildrenInstances[i])
+end
+end
+end
+end
+end
+LoopThroughChildren(Instance)
+return Found
+end
+
+function FindFirstDescendantOfClass(Instance,ClassName)
+local Found
+local function LoopThroughChildren(InstanceChild)
+if Found then
+return Found
+end
+local ChildrenInstances = GetChildren(InstanceChild)
+if #ChildrenInstances > 0 then
+for i=1,#ChildrenInstances do
+if isInstanceValid(ChildrenInstances[i]) then
+if GetClassName(ChildrenInstances[i]) == ClassName then
+Found = ChildrenInstances[i]
+return Found
+else
+LoopThroughChildren(ChildrenInstances[i])
+end
+end
+end
+end
+end
+LoopThroughChildren(Instance)
+return Found
+end
+
+function GetService(ServiceName)
+local DataModel = GetDataModelAddress() + 4
+local Children = GetChildren(DataModel)
+for i=1,#Children do
+if GetClassName(Children[i]) == ServiceName then
+return Children[i]
+end
+end
+end
+
+function FindFirstChild(Instance,ChildName,Recursive)
+local ChildrensOfInstance = GetChildren(getAddress(Instance))
+local FirstChild = nil
+for i=1,#ChildrensOfInstance do
+if GetName(ChildrensOfInstance[i]) == ChildName then
+FirstChild = ChildrensOfInstance[i]
+return FirstChild
+end
+end
+if FirstChild == nil and Recursive then
+FirstChild = FindFirstDescendant(Instance,ChildName)
+end
+return FirstChild
+end
+
+function FindFirstChildOfClass(Instance,ClassName)
+local ChildrensOfInstance = GetChildren(getAddress(Instance))
+local FirstChild = nil
+for i=1,#ChildrensOfInstance do
+if GetClassName(ChildrensOfInstance[i]) == ClassName then
+FirstChild = ChildrensOfInstance[i]
+return FirstChild
+end
+end
+return FirstChild
+
+end
+
+function GetFullName(Instance)
+if Instance == GetDataModel() then
+return GetName(GetDataModel())
+end
+local x = getAddress(Instance)
+local y = GetParent(x)
+local z = ""
+local TableOfDir = {}
+local LineName = ""
+local currentParent = y
+local Services = GetDataModelServices()
+local LoopedTimes = 0
+local IsDoneLoop = false
+table.insert(TableOfDir,GetName(x))
+while LoopedTimes < 100 or IsDoneLoop == true do
+for i,v in pairs(Services) do
+if GetName(currentParent,false) == GetName(v) then
+table.insert(TableOfDir,GetName(v))
+IsDoneLoop = true
+break
+end
+end
+if IsDoneLoop == true then
+break
+end
+table.insert(TableOfDir,GetName(currentParent,false))
+currentParent = GetParent(currentParent,false)
+LoopedTimes = LoopedTimes + 1
+end
+for i = #TableOfDir, 1, -1 do
+LineName = LineName.."."..TableOfDir[i]
+end
+LineName = LineName:sub(2,#LineName)
+return 'game.'..LineName
+end
+
+
+function GetParent(Instance,isPointer)
+if isPointer ~= false then
+if isInstanceValid(Instance) == false then
+return nil
+end
+return readInteger(DRP(Instance) + Parent_Offset)
+else
+return readInteger(getAddress(Instance) + Parent_Offset)
+end
+end
+
+function GetLocalPlayer()
+return FindFirstChildOfClass(GetService("Players"),"Player")
+end
+
+function GetPlayers()
+local PlayerInstances = {}
+local PlayersChildren = GetChildren(GetService("Players"))
+for i,v in pairs(PlayersChildren) do
+if GetClassName(v) == "Player" then
+table.insert(PlayerInstances,v)
+end
+end
+return PlayerInstances
+end
+
+function GetOtherPlayers()
+local PlayerInstances = {}
+local PlayersChildren = GetChildren(GetService("Players"))
+for i,v in pairs(PlayersChildren) do
+if GetClassName(v) == "Player" and GetName(v) ~= GetName(GetLocalPlayer()) then
+table.insert(PlayerInstances,v)
+end
+end
+return PlayerInstances
+end
+
+function GetPlayer(PlayerName)
+local strl = tostring(PlayerName:lower())
+for i,v in pairs(GetPlayers()) do
+if GetName(v):lower()==strl or GetDisplayName(v):lower()==strl then
+return v
+end
+if GetName(v):lower():sub(1, #strl) == strl or GetDisplayName(v):lower():sub(1, #strl) == strl then
+return v
+end
+end
+return nil
+end
+
+function GetCharacter(Instance)
+return DRP(DRP(Instance) + Character_Offset) + 4
+end
+
+
+local RobloxStringDataTable = {}
+
+function GetRobloxStringDataTable()
+return RobloxStringDataTable
+end
+
+local CurrentAddress = getAddress(StringDataRegion)
+for i=1,40000 do
+if DRP(CurrentAddress) == 0 then
+break
+end
+local x = DRP(CurrentAddress)
+local y = ReadRobloxString(x)
+if y then
+table.insert(RobloxStringDataTable,y)
+table.insert(RobloxStringDataTable,d2h(x))
+else
+print('Failed to grab String for: '..d2h(CurrentAddress))
+end
+CurrentAddress = CurrentAddress + 4
+end
+
+
+function GetRobloxStringAddress(Name)
+local DataTable = GetRobloxStringDataTable()
+for i=1,#DataTable do
+if DataTable[i] == Name then
+return DataTable[i+1]
+end
+end
+return nil
+end
+
+function CreateInstanceByName(Name)
+local AssemblyScript = ''
+local StringAddress = GetRobloxStringAddress(Name)
+if not StringAddress then
+print("Unable to Create "..Name.." because unable to find String Address")
+return nil
+end
+AssemblyScript = "alloc(RegionA,100)\nregistersymbol(RegionA)\ncreatethread(RegionA)\nRegionA:\n  push 3\nmov eax,RegionA\nadd eax,40\nmov ecx,eax\nmov edx,"..StringAddress.."\n  call "..d2h(getAddress(CreateInstanceByNameFunctionAddress)).."\nadd esp,4\nret"
+if autoAssemble(AssemblyScript) then
+sleep(1)
+local RValue = readInteger(GetAddress('RegionA') + 0x40)
+autoAssemble([[dealloc(RegionA)
+unregistersymbol(RegionA)]])
+return RValue
+end
+return nil
+end
+
+
+
+
+
+
+function IsA(Instance,ClassName)
+local className = GetClassName(Instance)
+if className == ClassName then
+return true
+end
+end
+
+function WaitForChild(Instance,Child,Timeout)
+local timeOut = Timeout
+local currentTime = 0
+if timeOut == nil or type(timeOut) ~= "number" then
+timeOut = 1
+end
+for i=1,1000*timeOut do
+local found = FindFirstChild(Instance,Child)
+if found then
+return found
+end
+sleep(1)
+end
+
+end
+
+
+function wait(time)
+sleep(1000*time)
+end
+
+
+function PartCheck(Instance)
+local ClassName = GetClassName(Instance)
+if ClassName == "Part" or ClassName == "BasePart" or ClassName == "MeshPart" or ClassName == "UnionOperation" or ClassName == "Seat" then
+return true
+end
+end
+
+
+function GetHumanoid(Player)
+local Character = GetCharacter(Player)
+local Humanoid = FindFirstChildOfClass(Character,'Humanoid')
+if Humanoid == nil then
+return nil
+end
+return Humanoid
+end
+
+
+local Players_Service = GetService("Players")
+
+local LocalPlayer = FindFirstChildOfClass(Players_Service,"Player")
+
+local LocalPlayerName = GetName(LocalPlayer)
+
+print("Welcome "..LocalPlayerName..", thanks for trying it out.")
+
+
+
+
+function GetFogEnd()
+local Lighting = GetService('Lighting')
+local LightingRegion = DRP(Lighting)
+local LightingFogEnd = LightingRegion + FogEnd_Offset
+return readFloat(LightingFogEnd)
+end
+
+function SetFogEnd(Value)
+local Lighting = GetService('Lighting')
+local LightingRegion = DRP(Lighting)
+local LightingFogEnd = LightingRegion + FogEnd_Offset
+writeFloat(LightingFogEnd,Value)
+end
+
+
+function SetParent(InstanceToParent,ParentInstance)
+local SetFunctionAddress = getAddress(SetParentAddress)
+local InstanceAddress = DRP(InstanceToParent)
+if not isInstanceValid(ParentInstance) then
+print("Failed to Set Parent because invalid Parent Instance")
+return nil
+end
+local AssemblerScript = "alloc(RegionA,100)\nregistersymbol(RegionA)\ncreatethread(RegionA)\nRegionA:\n  mov ecx,"..d2h(InstanceAddress).."\n  push "..d2h(DRP(ParentInstance)).."\n  call "..d2h(SetFunctionAddress).."\n  ret"
+if autoAssemble(AssemblerScript) then
+autoAssemble([[dealloc(RegionA)
+unregistersymbol(RegionA)]])
+return true
+end
+end
+
+function SetName(Instance,Name)
+if isInstanceValid(Instance) == false then
+print("Setting Property Value failed because not valid.")
+return nil
+end
+local SetFunctionAddress = getAddress(SetNameAddress)
+local InstanceAddress = DRP(Instance)
+local NewMemoryRegion = allocateMemory(0x100)
+local LengthOfString = string.len(Name)
+local StringAddressLocation = NewMemoryRegion + 0x40
+local StringCountAddress = StringAddressLocation + 0x10
+if LengthOfString > 15 then
+writeInteger(StringAddressLocation,StringAddressLocation + 0x60)
+writeString(StringAddressLocation + 0x60,Name)
+writeInteger(StringCountAddress,LengthOfString)
+writeInteger(StringCountAddress + 4,31)
+else
+writeString(StringAddressLocation,Name)
+writeInteger(StringCountAddress,LengthOfString)
+writeInteger(StringCountAddress + 4,15)
+end
+local AssemblerScript = "define(RegionA,"..d2h(NewMemoryRegion)..")\nregistersymbol(RegionA)\ncreatethread(RegionA)\nRegionA:\n  mov ecx,"..d2h(InstanceAddress).."\n  push "..d2h(StringAddressLocation).."\n  call "..d2h(SetFunctionAddress).."\n  mov [RegionA+30],eax\n  ret"
+if autoAssemble(AssemblerScript) then
+sleep(1)
+autoAssemble([[dealloc(RegionA)
+unregistersymbol(RegionA)]])
+end
+end
+
+
+function CreateRobloxClass(Instance)--Credits to Epix#3333 (280100243343933441) for his help with metatables
+if not isInstanceValid(Instance) then
+return nil
+end
+local InstanceSelf = DRP(Instance) + 4
+local ClassName = GetClassName(Instance)
+
+
+local InstanceData = {
+Refresh = function(self) return CreateRobloxClass(InstanceSelf) end,
+Address = DRP(Instance),
+Self = InstanceSelf,
+GetName = function(self) if not RefreshDataModelF() then return nil end local CurrentName = GetName(InstanceSelf) self.Name = CurrentName return self.Name end,
+ClassName = ClassName,
+GetParent = function(self) local CurrentParent = GetParent(InstanceSelf) self.Parent = CurrentParent return self.Parent end,
+SetParent = function(self,Instance) SetParent(InstanceSelf,Instance) end,
+IsA = function(self,cLn) return IsA(InstanceSelf,cLn) end,
+GetChildren = function(self)
+local x = {}
+local y = GetChildren(InstanceSelf)
+for i,v in pairs(y) do
+table.insert(x,CreateRobloxClass(v))
+end
+return x
+end,
+GetDescendants = function(self)
+local x = {}
+local y = GetDescendants(InstanceSelf)
+for i,v in pairs(y) do
+table.insert(x,CreateRobloxClass(v))
+end
+return x
+end,
+GetFullName = function(self) return GetFullName(InstanceSelf) end,
+FindFirstChild = function(self,Child,Recursive,ToAddress) if not RefreshDataModelF() then return nil end if ToAddress then return FindFirstChild(InstanceSelf,Child,Recursive) else return CreateRobloxClass(FindFirstChild(InstanceSelf,Child,Recursive)) end end,
+FindFirstChildOfClass = function(self,Child,ToAddress) if not RefreshDataModelF() then return nil end if ToAddress then return FindFirstChildOfClass(InstanceSelf,Child) else return CreateRobloxClass(FindFirstChildOfClass(InstanceSelf,Child)) end end,
+FindFirstDescendant = function(self,Child,ToAddress) if not RefreshDataModelF() then return nil end if ToAddress then return FindFirstDescendant(InstanceSelf,Child) else return CreateRobloxClass(FindFirstDescendant(InstanceSelf,Child)) end end,
+FindFirstDescendantOfClass = function(self,Child,ToAddress) if not RefreshDataModelF() then return nil end if ToAddress then return FindFirstDescendantOfClass(InstanceSelf,Child) else return CreateRobloxClass(FindFirstDescendantOfClass(InstanceSelf,Child)) end end,
+WaitForChild = function(self,Child,Timeout) return CreateRobloxClass(WaitForChild(InstanceSelf,Child,Timeout)) end,
+
+
+}
+
+local InstanceMetaTable = {
+__index = function(self,k)
+if k == 'Name' then
+return GetName(InstanceSelf)
+end
+if k == 'Parent' then
+return CreateRobloxClass(GetParent(InstanceSelf) + 4)
+end
+if ClassName == "Players" then
+if k == 'LocalPlayer' then
+return CreateRobloxClass(GetLocalPlayer())
+end
+
+
+end
+
+if ClassName == "Player" then
+if k == 'Character' then
+return CreateRobloxClass(GetCharacter(InstanceSelf))
+end
+
+end
+if ClassName == "Lighting" then
+if k == 'FogEnd' then
+return GetFogEnd()
+end
+end
+
+
+
+
+
+local FirstChild = FindFirstChild(InstanceSelf,k)
+if FirstChild then
+FirstChild = FindFirstChild(InstanceSelf,k)
+return CreateRobloxClass(FirstChild)
+end
+FirstChild = FindFirstChildOfClass(InstanceSelf,k)
+if FirstChild then
+return CreateRobloxClass(FirstChild)
+end
+end,
+
+__newindex = function(self,i,v)
+if ClassName == "Lighting" then
+if i == 'FogEnd' then
+return SetFogEnd(v)
+end
+end
+if i == 'Parent' then
+assert(v.Self,'Unable to set Parent due to invalid Instance.')
+return SetParent(InstanceSelf,v.Self)
+end
+end
+
+}
+
+
+if ClassName == "DataModel" then
+InstanceData['GetService'] = function(self,ServiceName)
+return CreateRobloxClass(GetService(ServiceName))
+end
+end
+if ClassName == "Players" then
+InstanceData['GetPlayers'] = function(self) local x = {} for i,v in pairs(GetPlayers()) do table.insert(x,CreateRobloxClass(v)) end return x end
+end
+
+
+setmetatable(InstanceData,InstanceMetaTable)
+
+return InstanceData
+end
+
+
+
+
+Instance = {new = function(ClassName,Parent) if Parent and Parent.Self then local x = CreateRobloxClass(CreateInstanceByName(ClassName) + 4) x.Parent = Parent return x else return CreateRobloxClass(CreateInstanceByName(ClassName) + 4) end end}
+
+game = CreateRobloxClass(GetDataModel())
+workspace = game:GetService('Workspace')
+
+
+
+
+--New Bytecode Executor Working!
+--Big thanks to plusgiant5 (UserId: 666793068791595048) for giving good insights, advice, showing source code of their exploit, and being helpful!
+--Many thanks to jayy/thedoomed/static (UserId: 960394917518127124) for inspiration with the first ever Cheat Engine Script Executor! The bytecode used is from jayy's old CE Script Executor!
+
+
+
+if not CurrentRobloxProcessPID then
+CurrentRobloxProcessPID = pid
+end
+
+if CurrentRobloxProcessPID ~= pid then
+print("New Process, Set!")
+CurrentRobloxProcessPID = pid
+StoredByteCodes = {}
+StoredOScripts = {}
+IdentityAddress = nil
+end
+
+
+if not StoredByteCodes then
+StoredByteCodes = {}
+end
+
+function GetStoredByteCode(HexStringByteCode)
+local RawHexString = string.gsub(HexStringByteCode,' ','')
+if table.find(StoredByteCodes,HexStringByteCode) then
+for i=1,#StoredByteCodes do
+if HexStringByteCode == StoredByteCodes[i] then
+return StoredByteCodes[i+1]
+end
+end
+end
+end
+
+
+function MakeByteCodeAddress(HexStringByteCode)
+local RawHexString = string.gsub(HexStringByteCode,' ','')
+local ByteCodeAddress = GetStoredByteCode(RawHexString)
+if ByteCodeAddress then
+return ByteCodeAddress
+end
+print("Making New Memory in MakeByteCodeAddress function")
+ByteCodeAddress = allocateMemory(50)
+local Length = gethexc(RawHexString)
+local BytecodeString = allocateMemory((Length * 4) + 20)
+writeInteger(ByteCodeAddress,BytecodeString)
+writeInteger(ByteCodeAddress + 0x10,Length)
+writeInteger(ByteCodeAddress + 0x14,Length+20)
+FwriteBytes(BytecodeString,HexStringToNumberTable(RawHexString))
+table.insert(StoredByteCodes,RawHexString)
+table.insert(StoredByteCodes,ByteCodeAddress)
+return ByteCodeAddress
+end
+
+function GetByteCodeAddress(Script)
+local ClassName = GetClassName(Script)
+if ClassName == 'LocalScript' then
+local ProtectedStringRegion = DRP(DRP(Script) + 0x140)
+return ProtectedStringRegion + 0x10
+end
+if ClassName == 'ModuleScript' then
+local ProtectedStringRegion = DRP(DRP(Script) + 0x124)
+return ProtectedStringRegion + 0x10
+end
+print("Unsupported Script at the moment for class: "..ClassName)
+end
+
+function GetByteCode(ByteCodeAddress)
+local Length = readInteger(ByteCodeAddress + 0x10)
+local ByteCode = ByteTableToHexString(readBytes(DRP(ByteCodeAddress),Length,true))
+return ByteCode
+end
+
+
+if not StoredOScripts then
+StoredOScripts = {}
+end
+
+function GetStoredOScripts(ByteCodeAddress)
+if table.find(StoredOScripts,ByteCodeAddress) then
+for i=1,#StoredOScripts do
+if ByteCodeAddress == StoredOScripts[i] then
+return StoredOScripts[i+1]
+end
+end
+end
+end
+
+function OverwriteByteCode(LocalScript,ByteCodeAddress)
+local x = DRP(LocalScript)
+local y
+local z
+if GetClassName(LocalScript) == "LocalScript" then
+y = x + 0x138
+z = x + 0x140
+end
+if GetClassName(LocalScript) == "ModuleScript" then
+y = x + 0x124
+z = y
+end
+local ProtectedStringRegion = DRP(y)
+local ProtectedStringRegionData = readBytes(ProtectedStringRegion,20,true)
+local LSByteCodeAddress = ProtectedStringRegion + 0x10
+local LengthA = LSByteCodeAddress + 0x10
+local LengthB = LengthA + 4
+local OriginalByteCode = GetByteCode(LSByteCodeAddress)
+local NewMemoryRegion
+if table.find(StoredOScripts,ProtectedStringRegion) then
+NewMemoryRegion = ProtectedStringRegion
+print("Memory Set, overwritting...")
+end
+NewMemoryRegion = GetStoredOScripts(ByteCodeAddress)
+if NewMemoryRegion then
+print("Setting Pointers...")
+writeInteger(y,NewMemoryRegion)
+writeInteger(z,NewMemoryRegion)
+return {NewMemoryRegion,ProtectedStringRegion,OriginalByteCode}
+end
+if not NewMemoryRegion then
+print("Making New Memory in OverwriteByteCode function")
+NewMemoryRegion = allocateMemory(64)
+table.insert(StoredOScripts,ByteCodeAddress)
+table.insert(StoredOScripts,NewMemoryRegion)
+end
+FwriteBytes(NewMemoryRegion,ProtectedStringRegionData)
+writeInteger(NewMemoryRegion + 0x10,readInteger(ByteCodeAddress))
+writeInteger(NewMemoryRegion + 0x20,readInteger(ByteCodeAddress + 0x10))
+writeInteger(NewMemoryRegion + 0x24,readInteger(ByteCodeAddress + 0x14))
+writeInteger(y,NewMemoryRegion)
+writeInteger(z,NewMemoryRegion)
+return {NewMemoryRegion,ProtectedStringRegion,OriginalByteCode}
+end
+
+
+
+function GetScriptByteCode(Script)
+local ClassName = GetClassName(Script)
+if ClassName == 'LocalScript' then
+return GetByteCode(GetByteCodeAddress(Script))
+end
+if ClassName == 'ModuleScript' then
+return GetByteCode(GetByteCodeAddress(Script))
+end
+print("Unsupported Script at the moment for class: "..ClassName)
+end
+
+
+
+
+IsHookingLuaStateAlready = false
+local HookLocation = getAddress(LuaVMLoadFunctionAddress) + 1
+if readBytes(HookLocation,1) == 139 then
+print("Setting up Hook")
+
+if not IdentityAddress then
+IdentityAddress = allocateMemory(4)
+writeInteger(IdentityAddress,5)
+end
+
+function setthreadidentity(Identity)
+writeInteger(IdentityAddress,Identity)
+end
+
+function getthreadidentity(Identity)
+return readInteger(IdentityAddress)
+end
+
+
+
+function HookLuaState(ByteCodeAddress)
+if IsHookingLuaStateAlready then
+print("There's a hook already")
+return nil
+end
+IsHookingLuaStateAlready = true
+local HookNewMemoryRegion = allocateMemory(100)
+local OriginalBytes = readBytes(HookLocation,5,true)
+local ByteCodeStringAddress = DRP(ByteCodeAddress)
+local returnLoc = HookLocation + 5
+writeBytes(HookNewMemoryRegion,OriginalBytes)
+local OpCodeHexString1 = '50 8B C2 8B 00'
+local OpCodeHexString2 = '3D '..LEX_AD(d2h(ByteCodeStringAddress))
+local OpCodeHexString3 = '58 0F85 '..LEX_AD(CalcJmp(returnLoc,HookNewMemoryRegion+gethexc(OpCodeHexString1..OpCodeHexString2)+4))
+local OpCodeHexString4 = '89 0D '..LEX_AD(d2h(HookNewMemoryRegion+0x50))
+local OpCodeHexString5 = '50 8B C1 83 C0 '..d2h(RobloxExtraSpace_Offset)..' 8B 00 83 C0 '..d2h(Identity_Offset)..' 53 8B 1D'..LEX_AD(d2h(IdentityAddress))..'89 18 5B 58'
+local OpCodeHexString6 = 'E9 '..LEX_AD(CalcJmp(returnLoc,-8+HookNewMemoryRegion+gethexc(OpCodeHexString1..OpCodeHexString2..OpCodeHexString3..OpCodeHexString4..OpCodeHexString5)))
+local FullCode = OpCodeHexString1..OpCodeHexString2..OpCodeHexString3..OpCodeHexString4..OpCodeHexString5..OpCodeHexString6
+FwriteBytes(HookNewMemoryRegion+5,HexStringToNumberTable(FullCode))
+FwriteBytes(HookLocation,HexStringToNumberTable('E9 '..LEX_AD(CalcJmp(HookNewMemoryRegion,HookLocation))))
+local function resetHook()
+if IsHookingLuaStateAlready then
+FwriteBytes(HookLocation,OriginalBytes)
+autoAssemble('dealloc('..d2h(HookNewMemoryRegion)..')')
+IsHookingLuaStateAlready = false
+end
+end
+return {HookNewMemoryRegion + 0x50,resetHook}
+end
+
+function YieldForLuaState(LuaStateHookData)
+if not LuaStateHookData then
+print("HookData is nil")
+return nil
+end
+local LuaState
+for i=1,10 do
+LuaState = readInteger(LuaStateHookData[1])
+if LuaState ~= 0 then
+break
+end
+sleep(60)
+end
+if LuaState == 0 then
+return nil
+end
+return LuaState
+end
+
+function GetIdentity(LuaState)
+local SharedMemory = DRP(LuaState + RobloxExtraSpace_Offset)
+local Identity = SharedMemory + Identity_Offset
+return readInteger(Identity)
+end
+
+function SetIdentity(LuaState,Level)
+local SharedMemory = DRP(LuaState + RobloxExtraSpace_Offset)
+local Identity = SharedMemory + Identity_Offset
+writeInteger(Identity,Level)
+end
+
+
+end
+
+
+
+
+function RunScriptWithByteCode(HexStringByteCode,Identity,Parent)
+local ScriptToRun = Instance.new("LocalScript")
+local ByteCode1 = MakeByteCodeAddress(HexStringByteCode)
+OverwriteByteCode(ScriptToRun.Self,ByteCode1)
+if not Identity then
+Identity = 6
+end
+setthreadidentity(Identity)
+local LuaStateHookData = HookLuaState(ByteCode1)
+if not Parent then
+ScriptToRun.Parent = game:GetService('Players').LocalPlayer.PlayerGui
+else
+ScriptToRun.Parent = Parent
+end
+local LuaState = YieldForLuaState(LuaStateHookData)
+SetIdentity(LuaState,Identity)
+LuaStateHookData[2]()
+return ScriptToRun
+end
+
+
+function CompileToRobloxByteCode(RobloxLuaStringSource)
+local Source = RobloxLuaStringSource
+local CompilerDIR = os.getenv('userprofile')..'\\Desktop\\rbxcompile.exe'
+local InputFileDIR = os.getenv('userprofile')..'\\Desktop\\input.luau'
+local OutputFileDIR = os.getenv('userprofile')..'\\Desktop\\output.encrbxluauc'
+local Compiler=io.open(CompilerDIR,"r")
+if Compiler then
+Compiler:close()
+else
+if DownloadCompiler == false then
+print("You don't have the compiler in Desktop. Try modifying it to your desired location or downloading it. Try setting DownloadCompiler at the top to true and try again.")
+return nil
+else
+print("Downloading Epix's compiler...")
+local CE_Internet=getInternet('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36')
+local CE_Internet_Data=CE_Internet.getURL("https://github.com/EpixScripts/rbxcompile/releases/download/v1.0.1/rbxcompile.exe")
+CE_Internet.destroy()
+
+local CompilerFileDownloaded=io.open(os.getenv('userprofile')..'\\Desktop\\rbxcompile.exe', "wb")
+CompilerFileDownloaded:write(CE_Internet_Data)
+CompilerFileDownloaded:close()
+print("Done downloading the compiler! Default location is in Desktop.")
+sleep(100)
+end
+end
+
+local InputFile=io.open(InputFileDIR, "w")
+InputFile:write(Source)
+InputFile:close()
+sleep(10)
+os.execute('cd '..os.getenv('userprofile')..'\\Desktop &'..CompilerDIR)
+sleep(10)
+local OutputFile = io.open(OutputFileDIR, "rb")
+if not OutputFile then
+for i=1,20 do
+OutputFile = io.open(OutputFileDIR, "rb")
+if OutputFile then break end
+sleep(100)
+end
+if not OutputFile then
+print("Unable to find Output File!")
+return nil
+end
+end
+local RawCompiledByteCode = OutputFile:read "*a"
+local HexCompiledByteCode = stringHexArray(RawCompiledByteCode)
+return HexCompiledByteCode
+end
+
+
+function GetState()
+local AssemblerScript = "alloc(RegionA,100)\nregistersymbol(RegionA)\ncreatethread(RegionA)\ndefine(ArgumentA,RegionA+40)\nRegionA:\nmov ecx,"..d2h(game:GetService("ScriptContext").Address).."\npush ArgumentA\npush ArgumentA".."\ncall "..d2h(getAddress(GetStateFunctionAddress)).."\nmov [RegionA+30],eax".."\nret"
+if autoAssemble(AssemblerScript) then
+sleep(1)
+local Value = readInteger(GetAddress('RegionA') + 0x30)
+autoAssemble([[dealloc(RegionA)
+unregistersymbol(RegionA)]])
+return Value
+end
+end
+
+function LuaVMLoad(LuaState,ByteCodeAddress,ChunkName,Env_Optional)
+local ChunkNameAddress = allocateMemory(string.len(ChunkName)+20)
+if not Env_Optional then
+Env_Optional = '0'
+end
+writeString(ChunkNameAddress,ChunkName)
+local AssemblerScript = "alloc(RegionA,100)\nregistersymbol(RegionA)\ncreatethread(RegionA)\nRegionA:\nmov ecx,"..d2h(getAddress(LuaState)).."\nmov edx,"..d2h(getAddress(ByteCodeAddress)).."\npush "..tostring(Env_Optional).."\npush "..d2h(getAddress(ChunkNameAddress)).."\ncall "..d2h(getAddress(LuaVMLoadFunctionAddress)).."\nadd esp,8\nret"
+if autoAssemble(AssemblerScript) then
+sleep(1)
+local Value = readInteger(GetAddress('RegionA') + 0x30)
+autoAssemble([[dealloc(RegionA)
+unregistersymbol(RegionA)]])
+autoAssemble('dealloc('..d2h(ChunkNameAddress)..')')
+return Value
+end
+end
+
+function Task_Defer(LuaState)
+local AssemblerScript = "alloc(RegionA,100)\nregistersymbol(RegionA)\ncreatethread(RegionA)\ndefine(ArgumentA,RegionA+40)\nRegionA:\npush "..d2h(getAddress(LuaState)).."\ncall "..d2h(getAddress(Task_Defer_FunctionAddress)).."\nadd esp,4\nmov [RegionA+30],eax".."\nret"
+if autoAssemble(AssemblerScript) then
+sleep(1)
+local Value = readInteger(GetAddress('RegionA') + 0x30)
+autoAssemble([[dealloc(RegionA)
+unregistersymbol(RegionA)]])
+return Value
+end
+end
+
+function ByteCodeExecution(ScriptSource,Identity)
+local LuaState = GetState()
+local Original = readInteger(LuaState + Lua_Top)
+local RobloxSourceToExecute = 'spawn(function() '..ScriptSource..' end)'
+if not Identity then Identity = 6 end
+SetIdentity(LuaState,Identity)
+local HexStringDataOfByteCode = CompileToRobloxByteCode(RobloxSourceToExecute)
+local ByteCodeAddress = MakeByteCodeAddress(HexStringDataOfByteCode)
+sleep(1)
+LuaVMLoad(LuaState,ByteCodeAddress,'=CE',0)
+sleep(1)
+Task_Defer(LuaState)
+writeInteger(LuaState + Lua_Top,Original)
+end
+
+function ByteCodeExecutionRunByteCode(ByteCodeAddress,Identity)
+local LuaState = GetState()
+local Original = readInteger(LuaState + Lua_Top)
+if not Identity then Identity = 6 end
+SetIdentity(LuaState,Identity)
+LuaVMLoad(LuaState,ByteCodeAddress,'=CE',0)
+Task_Defer(LuaState)
+writeInteger(LuaState + Lua_Top,Original)
+end
+
+function rloadstring(RobloxLuaStringSource,Identity,Method,Parent)--Thanks to Epix for lots of help! The compiler is compiled by Epix. (UserId: 280100243343933441)
+if Method then
+return RunScriptWithByteCode(CompileToRobloxByteCode(RobloxLuaStringSource),Identity,Parent)
+end
+ByteCodeExecution(RobloxLuaStringSource,Identity)
+end
+
+
+
+function GetFileName(f)
+local str = f
+local temp = ""
+local result = ""
+for i = str:len(), 1, -1 do
+if str:sub(i,i) ~= "/"  then
+temp = temp..str:sub(i,i)
+else
+break
+end
+end
+for j = temp:len(), 1, -1 do
+result = result..temp:sub(j,j)
+end
+return result
+end
+
+function getfile()
+local load_dialog = createOpenDialog(self)
+load_dialog.InitalDir = os.getenv('%USERPROFILE%')
+load_dialog.execute()
+local file = load_dialog.FileName
+local fl = GetFileName(file)
+if fl == nil then
+print("No file to load.")
+return file
+else
+local file2read = io.open(fl, "r")
+if not file2read then
+print("Decided not to open a file")
+return nil
+end
+local content = file2read:read "*a"
+file2read:close()
+return content
+end
+end
+
+function rloadfile()
+local x = getfile()
+if x then
+rloadstring(x)
+end
+end
+
+function rdofile(DIR)
+local File = io.open(DIR, "r")
+local FileContent = File:read "*a"
+File:close()
+rloadstring(FileContent)
+end
+
+function rloadstring_online(DirectLinkToScriptSource)
+local CE_Internet=getInternet('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36')
+local CE_Internet_Data=CE_Internet.getURL(DirectLinkToScriptSource)
+CE_Internet.destroy()
+rloadstring(CE_Internet_Data)
+end
+
+
+
+sleep(1)
+for i=1,4 do
+writeInteger(getAddress(TextBoxCharacterLimit),999999999)
+sleep(1)
+end
+
+
+
+
+ByteCodeExecutionRunByteCode(MakeByteCodeAddress('933E7363B9D1D4F6210056670D85DD3F51A976E21F43DDABC8959BEC30BDED84AF0A7E4B03C1D78903727878C6D74DD7C22B0205510DBB635BB69FF1CCD6D3F76F83E4F6699B7909B2454F2A72988274310724207D58A9C3D6E9145CAF7B729A53ED2F25534710730C1F1BF8CEBBB19C55D7A8FB304397C7C453CB4761B2FCE5E4B71B3A6AF3AFE8AE903D8A8DC97B6CB5D173AED25B78768156A43D480D2E2392EC39E18BC23A20B9728A0FA49417A08D1EE87A0A095A5F231DC503BAC073B5639E6DE8B8B4F34807BC07C82060886DD0C9DBAA160C3FA83AD95C20A524CBE893B8BDAEC018D5BAF19E0A076809507371C7B592C25325065105224BB2E8CCF534200A110097D224C07D665E2B69873146FFACB621B5307D15153C3228BD00FDA0409166CAD3E35126005CA9C6ADACDDE845D04D3C7C14D924FA09BAE23024939EA671107DBDAF565F5E138A8B401EECC6445161AD3CDA3EAF9B7A40B56402ED0404504F004C56D0650CE20EEB5609BFBDD726E6BC6559A8078E884D4F5EF6678301162DD7582A31039396977310A6B5D357617D9524A32ACE298F6E5BFCFF8257C5961DE15038ED5B3091C3AA7499F1C2EE5D7D3A214C688C558C9D2CEABBC804922B13E3F2639736A00C27D1EDBCE3C9000F01091E1409EB8EEF156B50D05F5BECF472DF1F3D4815AD31CB251C32FACCA520616ADE5249068A9DE5A974BA593627EA168DD23C5CC6F98804F8A1FA4D7F6A4BB74652D7BA268F3AD1F726615413C266B7C2BA3EB6FA6E6DC21266F97448B46A21E38073ADA981EC4DE43DD659006BD2D1C39BA1006416A887DDA7C15355609B25C64857D9B44C8CA7683BFB0F609B05EC2CC27F49831A1D8C2A181660E351923BAF5A4444503ACC257735B11D1335DA1DAD0037BD512BCA34B5D5A1686A28F102B46320A8376D9D7EC2531681DE7E5C58D255B84D7CC416187F3B3C72491D1CE693B784AA8534EF511BE0D63B7B7F0575065E36AE2BE117CC8BCEC07EA5D62238D776141F22E0EE459EF31F5E42E827E37F11C54D8FF77BB0F92471B6E22C9CBB2CD6DB98920B7764D43DC336B5932AD4421852D5F62D4AE3E79E50E0B80F8DED31050FF8F7A7C7117A25AD5E6E2F469C6B7446F2D6AEB8F092EF01095FC13EE93B167D8B81FEE376CF6524159628A2D6BB7252C7F831C3240B6E6744A9B328AC35953354A2F938E5E3A0C3BAE42D3DCC9CAC707392871337499506E5C2983F63235D7C427BE8268F95FBB679B34A6C970AF515A0F8B505F067866704B6BC75247F6A5131648CEF764C0FD8011DE98C01EA2005834B6D04762E3C5D9AEC0E0F51C57B6BF5E8DD8F57CDEB0313753B70679BFB47C19FFF96CA93F2BF38276D86019E2FD1A721BFE4E9D03ED105659603A660B06CC487DCE177A02650FDC85595C274017945B703CAE82BD281667A35A8EC9AC0DED9173F475F6F847E62E5DC11457EB93B673F9E6CB9737C4F389F4693EFE9CB91D59B1F95813FF763F060476E90041FF5E61A74E1C912A55E7FD4E92AFA3164BBB578EC50CB0329B16C2B266C466CDB3DCA71866A811D6FC5ACB0231D061CCCE39F09530115DB70FB873CF76F45F61820F5A56FCD1977ED47AFA3D850007E8E12DF7107FC49DC02AE49869FABC41B144588AF48272597108B8CDA482FAFFFACD3AE78355B2CE2B3FB95C3C71C7307D67970C35BA1909DDDD8543CE1A0EC51EADB57EC1C903A0582EB41295F8F4609020408528CED93B87B1F023DA99C533D5BC49B55D4137626CB21BD1EDA59E63A0313D9664852604965DC92D985BEFE142A790FAEA2280C9A9056D85CFB150BA5E1FD7FE0F83B67D1CA8044A60910757F65D2B5D5BEC1A63127A3785EAC71B490FBA7690C4F77ABB3506A90ABD563B727B26C34081AE6833ABFFB2CD021C35A0371EC30D80865B05B238C3011F54D97037796938121635E40E6B7A5E8E70E1CAAE550B8469B10FC913F8D0F9E8998F56CFEF939172AF0648980CB6BFE40D50754D25AF2CA01CB301740AA5B3A117CEDC95D0B804B635DF4A165D79B92F0CB6B6622831AA47E42557BEED4B073D3E65F8E761DA93AE44D20DDD21DCF82145D330953C074146EAF07FE1353960C4E1357692C56751E31F3B93C7F4CC1A13BC624D49D691BBF271F39FE18CD4786C278BBB7353662E63E653CE498FF37F28E2F5809423D1F0E2750BF09791E30410F0574EF3380B24374B5709771BB489B759B116418387E673D412531E610371CC19E2F14ECE2F0719BD6B602339E59AC1BA4112FAD4386F19F4CEE347CF443869871B887BE128E7A79B575BD0CB29AA431AD405F77C3FC3F27AC4C6B8F3B98F060DC01128C57FFF456219DAEB4F14D81B9B9A44999D46AAA652B0B49BBFECE42896A0D1B6E5B4B82E2F509C35E341790F947AB039ED23FB472360D54E00557B5548A4B32B80CE63016B651B45620A3E1F81C783646DAE27FE54A5EB2F2B1BAC96D814D8392D235BE6FCEB076721EE324773E009E13BC04169449BCB5FAE942D60F39C37407FAB24FEBF1B66D3BD83951198EE6BC0E318F38F68E22E980DEF044F5321AF8FA0F4BCFE4E31D94F395555DCECA3F5C5F7A5468B10B4AAD7FCDEAE1E113DF03FA6B1F335111E5230EA341CA83FFB5A6A8DF2D529B5189E90F9EDCBC116E41E8B007ED0A730302D076E5D703011CA7C4C502CD7B752B9A474E4FC5635992DBF92AABCABBF12E9BFDEF8D6443ADD3E6A335AC651133D83DC3C00216DEFF0EBDE971A774EC4E4EBE74165186FAC5DF2A3AD2090902F9E5526CD99948A49E1AEA4DE02FDE667A7EBE4FCBA4B496ABA093A4F098648A6167A8E4A3655AE06C38135CB8021DA51ACA52575F773B2493ADCF27340CB94475346838E5DBC7758B16DC44563BDA14FB91B99FB841D974C06969EC1C872B13C6194D3E989B5A6F0E5C819440299DBA64ED9864DA19234E2243EE95DB87D7E99952CA2E7E22252D1C5523B2A40F0BA0413B6518D65F3A6773EC37CA15C24C91BF3047355745A3341D02C28D8224CF0D8E1670D712971A7A77B9428E69D9C03F40E35ED1CBA76E544C3782D041E79D4BD48C7107366AE7BE8252EB2796CE1C9AE636D27420B0772FDA1049B6453AA46A9D770F432D0C96AE512D269EAA19DD4296B344E2E3378B84BA5AE12D028781CE0E14544D8D0374734DF34237D4244D8B97C338F6ACC41B1E464BD64DB1F37CF73BF4CFDB73AF6791D1FDD4A200EE267B079ECFA049274E7935A7F532648CC0638675219D4E891D824D99899C494F55E0BE11838FE71457E236177BD56F1CED8080E017A2A1F654B8C56457806FBD8AB43FF4C53164C53BF82E9BCE922A18FE90A6B63FD946909CFD5015756F8638AF5FDEF9DCAF5046FAE7CDC3C8EAA5AB9648E0DDFCAC9ED53BF801318A1D8DFDE6DA944B4FD82B892F97E08401FAFBF84059A5F268DAF47D1C695AAFE520A4A5AB8F445FBC86B5B317CD0B87411F482FA1C19325EF9A7FFA498424C15590B0B80CE96FABC7FF015E789CADB4B36245AD37491F3B47ADA365FC4041830FADBE85F183ED1CD0594FE1CD67558B6F217AF6FAE41430AA06845200248DF916AB5DEE18A9371D2999C8E1FE2D67411F8D9A878A66E5D567CBB89D91F63F1598845792D8E3A8A40BE85F1D1B3F258711AE4BA4F63BC39C6FD87C301F2091345407E79F66A414044A0A56DCD9C5008598B32EE59A4B33A70981C2E5E8323E8B7FB1BD790456E97CB6A7CBEB4FCAC51BFE6A140CFA3C2E73BF226DDF88479D6284F816558616087DD57264D7EF305465D693C44FE35FBBA3745B68F6BF14C8931276DA65A9CCBD0345BACCD5F401A6B656D334B062AF5B8D84DD08B07FC5E6FC33131B985BC924AD77692BFB08FBFCBDBF8E78C0101F1E58FADB937D0ADF0DE43E9ED4979073A85C84D504594AF10F1D117BA92384A4E40CDADF2A089061A6C867F0D51E09A94FD40F9F9F9ABA127C7C3BD82750589BFCE66715A42472380C8D1BDC2D1216F1A794366594795E91C2D93E5769ABCFF9B96E1CB41B99512C13DBA02C5F1B8D3B1A5794F98A8763C6E088DE50EE4D3CDCABFF1E1AAD85B9C83332C628DDC7F0F9B0813CC3E79286BA85112E066D1587FF7DFB84518FAC6EBBCA1A55AB1F00CCC02C72DB7B618160081C7B1FB097D0B421D66DE66189D738B93905563CB3234578E5E9802BA2E8EC20FED211E135B74860CC3DF3FD965E1E35C65CF9D76584686A6D12E73859C83CBDA704171E14C76A189D3923DA1ED556E9FE55BF8FAE01C3BB0926E16B3F972CB2F2A03093E0038307AD387E3D1B1301B7569C15B81A782F4FF7F1479AAE663D2E7A3EAE00E1D531C0EB231046D3CB3794E7D579639078A97BFD8689298486CF23709E237903AA89C0E43E2A868072EDDEF95EEDDAA8017AEAEE9787A00AB403D9CCCD0305B942A3D28E8EC9DCD67D169CCE404F3E148FB9DEA29A2D07605D6B9BD91762190CB53CE45545C13C24D3811D4C19DF1F9A1679F27ACCD0A4BCB11143B09DF58FE52E247CA60611E84EE1666B1995113D84FBA4217BCFC4E87EBD7C2F7574F53734DC9142AC2FDF1D9D8FC0B03AB14C91B132323EE3CDC3BAB07040C96381CE26771A0CE1058319330FC7BDABC9A3529BEED2AEF0FD1476C12A22DFAEECDAFEDD96E8566AE2AA5AC00094982D7997B07D227020283797EAA5A71F29FD2B816BE94F852D365E0FA663DCE4C0C8FB630C453D2CA399DEE51A4D111720382B3DEBA4C27645F23433F489C728316DE591A58B2473CFD0A0067DC9539C197AAD09816ED65CA8DDC5D8095A79907F2B0D860D198EA093CFC55DAB77B3F24FA2339D3F9298AEDD53D3CAA6AF7D95C2C195A23352235F492FECE15A10E3CA9ECDFA23C06D5ABF27AA9CC16EC4F057FF1F768E9235D7E2279740BAA06D24DEBAF2379721AD5180EE6059385B0218F42E84167A0E836613C7358F2EA16FCB159273CCFE3106D528CC00350C1801A51022A5BC67E9091D87652FFB1A0791E9B2197156C4B20A70949254D19AA774A0FC4C9431696AC64339D946895A807871674AADE609CA7D951B57965124B56B26D436D5FE28F978941BF40EA731199A38B45A2637F0593BCA7441C03750766D7253BCA24000C31C1453245C0E0B8C6F5E39BA2DFC327DF1D3E306C2EBAE781FDB7C4EF91D071D074DC0406AF119AABDE7F270B99F02975C5B2AC1428996D6FC034005CA10F9A61D0D8842BB660CDA0EA1973160788531CC7C686A08E9F3801176DF46DD12306914CCFABBCF8C7A83EB4D76EA111467926450AF55FD3F2E0E00A5D4E25DC8CFA47C4497A9BE2969E80FF09C21DE1C7C933A2737207E9BE7D82908FA9AD7C98B7D4C3873FAE6D8C9A755E2E4ADB61E252077DFD05D80C79A09E49AFF3BE51A43698282AB451D74AD5392355E2D0CCFCDB1C312824598ECAE3C6588C52C87D6A6E3D8CEC8FF6EB9C17A2E7198366B1B51C84652473CD8B72D04B9DFEFC69B9E3A1028CFC270955ED03B4F3A0840C0DB8091065FCFB9B6F57A2265BC129F31304230594BC0FDA5616D7CF969DF05A2BCFF2D60C75E16DDC755B1A899F25826C0A07A54DB0E90DAD4E220CC2BC2F179AD90C60DBAB1696810A75EF6565AE29AA4C7FCFCDB97615B7FAEB39B25248A855938E35E89A9167F64C41833DEFD53BAEB51FEDE75464C6A9071DF5B7104C96512E9116A730022BD625F68B2C75F640DF39783B5B80F0EE5DEB20EA6A11B4DBB5174976E3DD78DCD52129D41D90A7A48CA59915EDE74C06200A93C6F045F9CDD9FD3DD0E590FC814936158B176FD28EE0FB547CFEE0C83D020615D06ED22999DB200468D83E5A5D8CFD5579A2C56A3780792A4475D694448A254FAF993643E9F0DE6A8F525B43D95165ECE61688FD0499610C40458CD4E4AE71F7656384E9A835CD47E89A52BE2CAD7E97035C3E6F7BFABC9EE4FD07174B051A025431AE1E63C9C3CD848467632903007479913774FD53B5282467390BC2AA782A283CE5E49D724511B8F28D7D39E9B058606833FEC772ECF4026E40043D172993D3BA82102A95D63F3766F6DEF4A141709B08A766C5D49C99F60BC602D1E252C14DF0C8BEACDD013E78DA0C8501D7111AAA190A98AE3F9DB934FBB7C0F2967FC41528B35BEF167F055F1439FEE19B09B40E0869D88F0D4ADE203F0EB64E7159770D18331FFFA781AD7ED5BF0E9553697AAFEA7F84821C3A1DB51A38DB075FAB1525BA53DBC547700DFD820520D2E912FD9A8A147DE739E5986CF65E8280CB5E1FD0A64E0C2B0A78D960C550CE162D943F0B8641519A1105FB10D4C5F2240CF121655FB3A7E91CBF95199EB138DB00FAD5FD6D757302EC78DC0CC1E2FEA3BE7C1BC3908FDA1D85CD322D6BB47DBE0E3CB7E516A0EE847F433898754087BDBF8E8B26401EFC0615959B662B41136C1C71390DE56324020B12DAD01EBD331F74463AAC00833DCDEF25816448A63F8D73E6370768F59425FD95FC73DF30FCD6221DEA3532D64171D2805E0E4D4D0840A27B90EF1EF277A4703977B9D3421484D3122680601070BDA11FC029F6B3201AA6080D9AC1DF4839A0469073DC7EDEF955FF5E45B7349CFEA6FE23C116266FF9A56193E7C71788844EE94D8D4F21F34FCF10DDF8475EF886EC0BF8A5696E4FCDAF0F5AA7A457F70877E599313C85017452E221368A4585740E58B6F800CB6C2DEBB9D0FB7384A22A1BDAD4D1A62A57BBB2A43AF9B1C6F834183D11FD94EDCD0E72513CB19A7930AEFCE7EC5BD9690E79BA6D7C0F2A52EC9FD8F075723A3A507EAA57C8887F8C9B57D8F47881C319F1A1136410BD0196A9BD1C20D4B1950E0C102B3095ACD49722580EC02D3D9876CE328513728DD7E92D8B648008E30229FC28F1E0A10465D7E983BC33BE0BCB126C747BD694D369AB9BDF83BB4BAC05470FC6D7A83A0F96393FF03A5440086EFA000C170AD62F553EDC5E5C915E969C43FA0BDB1F307C7E68BDB6B87E72E63018A26D7F55A6A7F82E2F5559D22B2C50E3B1F2367A3271707CE5B50ADB502F8840EB110E53E43B2D742B375FB671FDEA0474C6D4D9D0378134E38259F403C065346D722F694EC4BAE4E8B073D6312D211C6AA6F8BBCA1AB5CD90A30EFF0D79056B6BD9B44B4FE3691CA7D1964251D8D7187BB888779C99955FBCD70030EC4067F0F423300518C2BD98936409817317DAAA9654B1AE792C56D8BA37FE18B3B6B9EF66C8408A3C66B0E595D3CD21892185F53AF485AAF9B00C3BD0C90C60EDF21070D5C633D7D81A6A1FE6330335ACD9FA301E4CDE31502F84D60EF066143D41BAEDDC1F4C7D4625BEA4CFDC3C3B4A7DF1521FAAD8C99F10ADFC1CDE35063EE641A3805FEA647682A0745CBE1069A96694C06DBC87F3CB3EB8466D0A8A8DEA0458ADE42D5575CFE715A32F2012724CE61B397F90D99C20E86DA079DD63A83F6702C507995B8157192192D5AA7400C51BAE707174E53628969AF2F3C8B36ACB64F110F2CF5725EDFE8980FF089FE1E3A46B5CDCE9167ABEA81813705BD6F19C7BF199742DC17986EA1981EA54F81197473D833E51A7413E58BE31037105E3102EA0310836ED601F1000E52F0E426C3A777345099312451BBB3EF806ACC1F44172D6EB4ECDF2D52883C994A897B7F07BFECA7487B8841ABF091019C8FEB39064EE83E53C25159EBCD7883497897604E90F9D47C73AA0684D39A0FA40DD30FA7A918661FE86996A1A98B5764BCF84F2B93AAD50512D71A03AB5D126953CE256E16491FD6C349F5CC038B8360288BFD59216516F036E1A49AFB170331CBF951D61D10359F12CCB91495AA99707ACC21D18C106F7790800603BCAB13A8820009E30B7923A3E58D671BBAECB9912B3DE33033122E1356A8AC691A9AC1B90D81435634FB75AA00900AA461014F8632A3BBAC7E8538D71B4F284ADCF1F88A0BF2CBB97DF2A0637FB601F2A7377DB9D361468FC52F80ACDC2111BB7886B558505FDEF9CD1EF1D82FBCAC99CC2965BCB2219DE0E6BD19E2A77737F85AD2F77DC847246BDF203B91E77A1F4B2EC19C65B5B057F1DFB2E1EDAA4460001651326CAC59F78CD8BA8F157E19BD03B558F4AD950D23A5B6B0252540AF3F1E638E38BFA686C49F8C68F3277BE0C8A4C60E250D7DA1C2BB1E21C98A27C96180B6B2858DBA110F89713C2B2B058DF9CC71BAF85AA9A17185DBF374D7027E5371C6EDA604BDD31150D33B2D63292936630BF4DFE4845DB88A616EBDE88BA723F317311269BD54CF8F1082315A1CC75A34E5BC32BC14D600035EF31067F4331E1D386C176539999D9EA704C5529F930B0D2BCE8C890BC1C7F3424350F5149C117A9153001C845F7D1188F1B5753A50B77EBC95D2D17DE1AC4D1CB2D6F6CDCF8EF5073A7348717FB23DC2B7D5537C6808459187DFD7CF9A3DCCE5376310774B9EBB96EF4FEF6F577FBD1A7EB3A90A4A17B5032FFBC9A57148D650E958A9FCEDDABAB7E3745B27FE3EBDDD97E1D602231AA444A9230C328C914566C16AC8D55812CDE024EE6F26E44F4B0811456B2DC34FEF7B327CAA097C38100898A8C0FD2611FA4FBE8A5AC836D8B9CBBBAA93E068A350BE2B9034FB61245B76367DE1317E67079D3E49F9A29CCDCFECD8EAD5B5029339B1BEF425BA17E6861B34995D4176B4BFD12829760BE739FD0C83D7F16DF447278FFADCCF67C9A44D94287870855B749CC9D592BC62A7E072593157FC501413C6599F22347E35CEA9189CBEFF031C6EF8240B5821927740B70A5C2AF963BC6A8ADCC3C6BA25C5BCF058AB48112B53C70AC59140AFDA394A02D3997A02BBF89F205019B6DEA243153AEA73245913C2CD5251953225345B9C0F207B867865369DD1E61E3274FBE8578DA47D47EBDA9F4F88203CFF6A96B626234D8C65ECE331FA1168579041B23526A7CF90683D4DD4FFDB57207A600B916411875AA11DEA77DEBEC4B30F8535C3369308660B34568C2D7E34E2ED8AD38EF4E293C63C4D0D9E1215689250B865C75AAB229084A65DB4E2D82C3D4AC5D59473444DAA62B6D7EF575D6447F380FFD1F0D7D62B2AA0D14218EAB3FD7EBA3AA5C772CEE9EE90DEA7846EBDFD01AAF2634E8F3BEBA2B8C0132023735C98D3D097709319B241FA042D4741C6860E1892006A4998C17AC8AA2969534A48A53955AA885FFAB42EE636F2FAA9BBFB9969D3191656866DCADCC848FE93D59E1CE957E7918510830FA9F29FDFBD91A54A526EC0A2C08CB3B692D8A929052C18D8A3F3AF1784BE22AD282C7FD489F68502A82020A1FFC545BAE1F849C7019BC01348644FDB16FBE0028D6EC1642AB30EDCC4851B46E302F9547EB843B16CB1A6B073C04D3239B8C44CC70C9D704141ED7E4D20CB7354E37948B8F9EA514F5016F14C211212594BD50C744E1AF3E93ECD73ADDF2BD31698F1BC54D0AF98C63E6D161D93F6FD255511E44C8F194B2B373DCC67DAC93D29964139CB8710A4CBFE894D197A759E618297416F5E38A8E2329BB92884124408EE70E452F0748B84272ACE0362DF33B535589152CBF9B8AAFC2BFD52C9D17804E8944B30782C0D02E5A09F8D465D82B3B33AF4C2431B2DA7A037593EE3D3B5E33809BF37467AEF3A8FAA96E0C8695468592954353503B5304C4D428AE7F8229678C7C47D53C4049F3808E7B81F4BA34EB6CF52B201E97EA5A94475F77AD03462036DAF0E327AF83F6D544469EF440CFD7894F926F8EB126ABA0AACAC0C21CD71FE4E3DBED157EF708E3D4DA09A84408BB2FBEDDED2607AACF210CB631F936C04DF87E1CE005A9EAFAEC58D516FFDBC09885E132F4316B8BF77C7ADC04EB9959DCBD9FDD8BEC8E1254AD427DB071565ED7DB700EC59CB01EDFF4F632E62DB339903F897CC51913303525D0F7F537996D933F8954D3D7DDA1B42F90CC528B05FEDB77855C0D67BD7FF6A6CF7EDE015E7F9BEE36E9EF43B3C08784E6BB49B3EE0C1F6864F4CE0C028F1A4FFF17AA51A93929B11187295EFA5839B5B8F661ECE75038A3B6338CE8DD058ABDDF93D25F3F1A3D16B848B6B224655A598D39A4A572F8675B93B776734E58B666D7F6E9AD80F72FF9BA13BEA9BD7005678D61D98F7B5863544E807E912CD42E24B6EFC00AEF51A651C9C9583319100B5A3B4F4358011E00C8F5C3E1DFA69344156B5C5793770F189D9F7E49B8559D74FAE4C3612037A5BB6BD1D806644AD53A389393AC93799A1421A0D446388F1E33BB23B0F81F6C183FE327BF1070926A35DCA15DFFD82FEDE0EA0B8535FC907B8AC7BEF98AF3DE34D6A7D3976DBC80762976263A540E98499E8A27B6D1790BE3E2FD89ED584DD41D50774E744DDD79FFFB6C7ED11E998B09B486D84B0D02D99ECC403E1780B022E337E4AF444757412A1FCD41B3DC2B4A9B5FFD78CE3FA5A4450AF70288AA8C09C3E5395FE93CDAC88FD82A1E22EFFE48C6DE57AAA5E833DB5EF553935EE141CF13FBDFE260297465CB2DC5A8441D08227A70714EC4BD1B87CDEB3F35AFD988CC36A7CA93401F0EC29B0F7D4A5D40B206F4A5901A940677C87930AE2C2FDABCE1DF466876BB3821B95503A9F350798D4BD491A3EA421C711F1FD3BED5C0C7E3C299068533FD8BA3B163501C96E9CA30B9BB86FE703671FFFE65705A6DE7843D34E2A73AA57923595754171844996013C14F8B9A782F30B9B265F42CB477F6FFE7D238A04ED3FF3858BD6F2E78319E90979B41195142AECD7CC7B17E5A6DED06311481534738DD381E46DA914A95B5387E5A631B42670BEDA27C94C208DA82CABCF5EA49C4584D430B2CB74FB6C1EAC7F760B108E511E8811C7DFF86C9E70526EF73A1FA1D063E1867F755C86B03A143AA466B89096836C10E2C30E2A7B033B0A47B302E00D913A0EE131DB010A95AFB3E385C3F4F0267B764503D3BA5C601B80F938C572EFD2A828CE403DDE200F9D36B655644C1F0E90989C99782C542FE5BEF43AE4A7BB28CFE6EDA401666FBFC63F9B96F9EFF5EB4F5962D709BD75A04C015910A5CBCAA4C74F472F28A1E1A6D28B61E1FAA3D08C48851B1CC79F9825F2A57F06BCA3D4B3FAAA94F9E0B7A4613CE0B037BAC17352DA1C2DE0ECEBF0E168398BB4C3EC6BCD72E39C8E50575A7DF5E8E0ACB2CAC8DC5272936C5813850B3AAAFCDC380F9BF59F2095E1109DC22BD7A373B8095D453850D6791CB61BB72462942435EF51A78829C76C282CF8B44A2FDAC32CFBEF97E43A362220AB3E4483B39644FB96013FDFE6ADEC2B1A8CF2B5378DB9DE7B6CE54572378E9889CC5F1C57DBDA19E5496D367BC374EA1F4488EEB5BDED1EE53E92622B534C6318604044604187E9749C847F150250ED8E0B237675F9EBAD81DAB3204A95C7E742A93AD4A8A51D2277099B1731FADC73D8FAD782A287E4E81FE8D98825450AA2989384C6BD25517805B322F2C326620AFE9575AE338EA0262C1E9AF91D56ADFBD92E8A438CA8C01EE9E277FBFF1B27063DFA10A55D0F71A5D513BB8021E3D4039B0BE2554419D844445B881FABEE47D2A601CF1D51EBF0EA5FEBCA315348509BB0C0CDB7EF94A99BD53F16EF1E3C5BEC74ACEEBCB0B0014AE04DDD99B05D86F0F2F2B38147917B911D71B5A16061126BC3AC680CA22E31F04E5D5B146B7A8FCECBA47352F11F794E6483147DE2C1DD14870E0261ABA121FFE35AC65308CDBDA4B9F9F2396D2F4019D800F26611AD475C38DC32D52CE862F6970A5F9C2B008165D6E37EB520B8176641317FB864BC2EB9E65B920E4A9F7192545CBC2DFC25BBF7A9FA397F9F68A36BDE9F4EE8B882B03AB27E8DD80C494F74565608AD47CBC45A3EA5413541E8897B44DFBFE615AAE76DB23EB5A4BDB93925001CD3218FA880A5C4B703BF4074AE326C652DCFD3C8B54A45A6B4598A464D7995757129547609F1CBF0025BC79B169328373E2E140B5BF4CA6257AD8BC5D5E143355B146BBBFD6B3BCCB877D7950513EDF501B2593F7CF2143AB97924541476EEBE4BEF8CB780D109E20A8DFE729B791A48BC07E2018ED95551614B6C8D549D9E48A79671D72E3DC297F7C05E34A490021AF5FC60F57EB40D8F1265360A39CC70D23398C241C32B8B99663E86208A728B895FA86B53973C05C7514336BB465ACC9045D0290ED334A624D2B307CE46A9DBEE471D1E08945CB0946C7BF9D870B77C3C8967D2D220ED45BC15999390C1343AAE2E02B49A57F7FC9CE096B6DA1B1FCD13D447F74B3DE889AACB8168B6FACA5626287B0852A98EB1CC94FA123AE07F96A73EF9226EBD95A49FACC21A886034B114F85B3A05B9F09C17804DF322D6FC870C8B6F5BE0F1C9D93B73FA59E094D7FAEA1A791A2B72148261DABC67517D5B3C99E3C49C92303545F0608C8FF3A50EFB15FAB5EF64797E11FDDDF24E93772E09DB2D83F0A1FCD2E9A7422C22CDC8191B6A39C9AEF4A63E2CFE510FDB44DE14350123F823DC0FE02A6A08441941BAA09AA6F991E42DA5656D908FA6C641D5F233EEE9B4A81056400DFDCEB538718526AAAD4A47484D1449BCB045CCE8C87CD681FBC1399E19E9E9212DED226F6BAFC5F1F7F51482D6EC9BD7ABBFEA994C0B1D7DF858157E5E593D788901E727A0A133E0BD0A7027DC81D69E3DA7CE15ED9A770DC4ABA3FFC3C73F1FF372087F2E69654DE11F32A458E70CAB7446B5B1ADCCD246B67F6FED31C95E18D42767BA75E163FA77130F469D9D7096FC3238AAE9F720294BF3B85C13510BB0CB8B2927F06CF5AC49361C4AB7288CBA438DD7B43E6E12C37C1F6F5D9998A552EA2C6ACA80BAA250EA81B270DC1299AB6FDB05F77F4FA27B1A28DAD8CAA9F3137BCFCDB9DD8D24594DE204210A7FDA8853D684E81868779EB2660C5D6F80C3BB86477B83957501E5F2FBDE28E251C51F9AB8E5FFF376B6296CAEF65C47C645517F8129871158C7F84D501863F2893FF141ECE2C9952D69BF03502FBE3094D35D97BD3B9E1137FFFD5660AF6B0709D7DDB820EA364CD585B81406B05AC9A93A3781EB93E813C2733322E523622F012DC187FDCB74D099028FD82E8403963ADC2C189B74A6AF69780DDA79E1C9075C29A1FEF15CD95997BE20FAE7F8F9E53277A722E9E1B6319E325F5C69E276294236FC169AC1F37E038F98C09B1A35740CA48A7DDBFD53C78B4A52196785D87C14420CA87D87E848016F44B1057C5C034799CC5FABD9D78B8A0813629167F9106D6280FD4A37B0CC9B3CB45E698C56F894C791AB707D8F4CEFCE47C7B6C9FC25EF138B4803B22A11E338A53ACBF7E8171C9F7FF96E4707B8371F0CC3BB8327097BD1EEA28103E866D582F4725DFCBFFB354932FB2225F2E55DA1F51E363E5F30FAAAF3FB1CFD96C25A239A7CF877C6CDA0CFC93B2D44375575ACEF841F5FEA978485419C8C1B3FC85D92366FD918490DAE885AD50BC67ABE2B69E6CCEBC38BE84B00BC6A46A37CA629EAE17DF938BB41D92CACCF7666DB343F5EF77DE29A7A730CEC20ECB5BCACE5D9742EDB8A4B07CEAF1474282CBE99B9D00F1A45434136D0F9A3DC78CE0CE4DD8408620C3690F518D009ADE14DD3EC5176B33062267619AFA5D4EA46B36F61F0D1F9DDE512527C50C5BF8A0F6B8ADA28858E55DA41CFD52B27409F2A70CDBF76A407D2F4308076395BBB98205E7C283001DB3E472242794D50C552584B11F3A8A15EE5931582FE5FF5E56AD6610D749FE1B79ECABB8338B98332145DB5D666CE27297A8C77A1D32A9F0625BF30536E0D9BBFAC1C9E7DEB432861D72D936B8610E9F50460257040081E0D5C2CB0101D603CBFE3D596B43E8B53C2C5416F7211C20BD16FCE4F0D171FA7D80AB13260BBDEF1AC8A44C474FAEB639E65BB3CA120EEA2CC3C39596B570565AF7BF6D68D2630E266F2AC96A6559BC37E09E8A8A16F07453AB5D64AB8DA8304FDD57604AED0CF6E7F1A2F1C9F6FDE221B83E3C5825AA4629ED35E1F38652F724DEFE4DBBBFCDB5A4B430DA6F1F5B79AEEB13A4193433DBB34C2AF200C9BFE4F00CAC2AC42D27069123E59610625262A4BD99A30CD1B01A6D2AC3BCF94010D9C1BA54B125B9696B23B750B140E64C77376514C6F20BD8EE3AC3E5CC9CD84C065F08A8D402B380A5291841882ABDB6B3597EE4765AF0EAF38700712A8B7A7B59784C0C9E4D0D49AB38183A3D4C021BB1501FBBD9D1E480D71B8A5CDCDE521E72D0909DDD429DE08E64976188587155C504102BDA93AD8A77E367EF66429BD0C180127ACB5F8839DFA4F7088904990F27646EDD413A061CD02B135C183D86BEA5B6A649C576AF164ED0BCFD0CF15266C66E354765582A19A356B3706EFD1EAF4CEA41124AAD3B60682B61C5129C71922383E3BFD35DDC322F4861CA0C37641F777BD05F62E9A77B39566C05F0E22FE038E41A2DEC88BDA58ABD8388180C620DB113B8C1A820B52DBF9F2401C8F6522D70FABDB1B9C5065FA0854028C2019B4ED20478CAB3D680B363116ADE06CD4FF36503417A0E700C343592EFCED5A42CBE80E18706102C64D7BFF9BDEB4447DB5760518C3D34EB2B726D09858097C70834E6CA51E4E746B70ABB01CBB8B1C876E1F20D23AB2AF11327D6A29EF5A41F8BE489F8242A28939B4A91AA95716BC9440B1F6EB6AF9BFAC29CF5B7296BAAF1A2C6AC8CB92F3163C082984C472B6F4469B40B67815848CF212F41374CC6381203E703E7A0CF736F92E3E0D7531DFF00E6F4BFE6ECFC880B3D354FA1BC78D508725CA6FD42B0C9D855A21BFA6FB1B6B3DCF72CD437F572DCEBC4DE8D92E66BC5E279F824D683B1DC92314728F5554FB8C7F1712E1187AD964BA8B27E8EC715B32454152C9EAADDDBB611234873B4A97B9345746B8BB49714D9C9F62BA0059E43AB2495882F5725F784AB85C97D975C81587BE3A8978FD765E886E5C725D2284643DE4400947968B8C952BAE41D12E2E4F214AF74B596DC4912F06F47C69E1CE1A99DF3F64B0EA94A9B8DAEBEEE72DA4EFFB6398194558A71B4B743F926CCD672512E5134DA653AC8ED7AC2BB0322B14830951D3362344DBAF3859E0F386AD7C4E148E0F761D398FC3CA079F63D5668404A596FE45AB1C0250B9AC6268B649CBFD3D3BB29D481FD6D4531BD57C0D52EDC3375110248441B0625EC4B624FE250044794C65C21360510AE9AF57EB46F16784C8179AE72CCED4DF63CE8608435636881DE0A68EBE424A211C91E3BB06720445646B30ED2639D5A3DFBA909C18DB53B3FDBB3CE0BF647A05D39524B0F69B3536E3110BBB3B553FDEE73391DFCABEE4702A7984251F72F2C9C51FB9D13F4CC20C6CDCCD77D5769197E5C77200F8947426521435E0A705740BE96E89AD95D20D631A2F4F12FC7BF905374CE3713381EC80D4E8D3AEB1A50436C7B1C756AE10D7C29B42DFB3389CB235F32F8F15A80345DA9ED71C089E63C434E28925F5CDC2B4B9BDC1DE2F89A5CE2DE0F0D1BB7730F7E438D2B4753CE5CAD2158FEE0453CE4F08C44244E6EA48FF0087DFB0C3B2D0DD523C01EF2BBB742C3A92A140F2C475B92F83FAF5692B10E3DF28524902F070F75252258C997F09197F4E7CA8607C67029783756C8F9C00E70280DCE48F2927C21A0CD8EEDAC277B3E0B348EA304C4AF8D0E8855F11D02F9C485792A3C9FF181495B35E71B65CCE520E218D2FA8108414779D89B336CD0238D201A03E262910816F2AA968FD43801670CA89CBDB561131CDF72C22518F6C3CB4C7665AC9611BDAB4F0B3C3CDEC1128E4783E8B80C9383084596EC9990D9B2CECDCF4C34F5C675635D17BB9D034400A1B06395682584625EEEEB997FDD57DA07B99CC9F91623CEE2A8DDE37F466AA70667160E9E3F3DF8F98A8EF75C5689FF87952D6D2CD8B9AD616373FF3E4ECA50F6C5AC7534003544F8DDFCE273ADA990B8BFA06EC061609D6133045C599E0F3974B984B40B0CDF2B7BDF78D7AE41F1F6BFBC13203A21DD610EE0645C9C3EF9628E715A62B34400090011E41DE01F30948D887BB86F9324FE807EC9B52E2A885601FD43A29D83C4DF5F50E4AC3635CF9C50004B5046CED04BD43001C223BB8FC5E3DE7CFDE44919566045CD4A242EE8CB997FF3DA3B5E7878223E15C37510D3D15EBE25B8E38DAB664C2C8ECEFEA5AE314E36F475C13C1215D0365B983EA0999400FA9861D6FAEE424F608C999D6F2680095B9008087C6443929C2DD01EBD2FC81E3CFE640C4EBC37795494B5D7CC6C19018E2E21BA60127559ADB55FD968EEF90C12883D47AED44F55FC0DF7C2B41BB9273B5C634D69BC290033B977412FE55FC0012CC269694B3B8D81CC5E48243EE417A5A7038A309FE64395A4D07D0C0929E1C46BA3E29F5F6A9321F6B04E73D9EE7DD7B86B5B82DECA6B8A3CB04D992E83607F2AE32781D44AADFA6F223B4254377EBBC8CF0FB977B8FAA683BF8B1B905FCC5557A173358DF9F5956888CA7C3AFE83150EF1433D8772A179D88A3FFC821FF671BBCD094386AF964C2990355888914EDCAA5AF3F0DE284377BD639861132D27E3B1ECF2958CC5F2398403B7DF7CEEF1065795BE625BF8C6BDD234BC3640F017E24BE7483DB890CB9BE000D8E9A5A8761C679ACAFB6DA410C2EFBC891418E87C47E809093F7D3A3D404C0B98B0CF3B53548B65665B6F0EB2B491E04CC865194CAC7B3AEA5DE056C7B58BBAC3E1BE09E245D976E0DAB840BDA8E9F0DD27B83CA24160DF49729C82830D067B1565DE87D514A206956B27D22A3635BB0DFE7C9F5E2ABD8B68438E22DB59F8718DB40F412359A2B05821E7B36D2847A84097BBCB62C18A13E7535A2495D4630394832E577CC985930E6EA3DD292F45B5E1A1B9AA89EBAC02B79FC613445DF91E178E66181444AFE46A9CADCE12536461AE9F866C34F56F88DBFFFA172D05E86F4BB4CA587441DC6FF92A11E9F6EA851D9ED3932FDE4F690A40B351011EABE0C5B31787BEBC61979D2402CC1AD8FFB0B084FABFADD525F9B43FF75B852F5967D5B95AFCA2BB3A19D1ED8ADB1A2FCC9107274CF9E3E8D1544780D997C568C7510278F10E67C53343D5C952BC251E8C3EFE737B34543BB03D544219F68CDDA3C6C0BBE632AEA12D94F050D7B723A94BAB6FF37F6E83FE86D80AB70610D38353B64145C16A96EA7D15F71CFD737843093846CE28E79998D6C17A2D98AA5E4A16E3B90394A7B523104B9AE38AD0C6A9C41B8B52EC68E270A218D8E9F6CD66C2ABC58C94017855FBF620334936A4C2C558E5C4E78065097FAC9F76150D9B536BAD60A3BC3AA97B9F7F0FC905A107F9788601175CF618505AEDA0EB52654B6BCAAAA7FC43801F397C165D3A0B78ABF20E48CAB516D875E7CFDF5CD9A268F8BEFA8F01C0698E9ECFA178E621602A1C2D587AE7B6B1A0A17D514DB110EC90DEEB9E1CD1F785542835E5D9982C4C562C6CFA5227800C50D1348EF97EB9DAA761B269DEA78A86FB360A1004804B4D0FE037B37740527CEAFBEF47CE58CFB4E55162D585E43D557C59360D5E867B4A48983095288CFF62DCCB31FB702F0B600A19AA22379CBAC88BF42A187953E069F7E4652A88E0D8CAAF92340FE0D09E84EDA5C72850D9798CFA7289CD8B76D7B48CE17BC9FCD1BFAC3AE08DA296763989FF08C1FCBBB20959AD084F1F8A21D9FFEB2A6166C9A4041C4B8AF130F5860BDAEFA38C49C440CDED74268393A5EA6DC4FC6CA40F50A50E43ACDEC2E8BD2A60FF89EA320A70A0EF9033D504DA3CB209554F005045423CB2721BF14B29B63765B088B6B8BF0EC06C6F781FB622F2C7B0E3F1841AE482DB30D775C2B64A7646DA9737FF0E4E16A63659C3FDF3D393853FB885D132B475219F0A62D006D22A78A95F5520330F30E5D1795167DE40BC8CEB65A04D347DB6B26836EE999AA32E95F4F4F6E98AD7248573BC1B40BFAA37DDB600B64C3D0D08CF7F0D33034640A8C13D5824E537F56C8FB812F4CCC39CDB9CAE0833A0817AA3A4FF0C9C7739AB475553ACCACAFC01E15F810FD995F66A13B97BD014D7612A6495FF78175633AA8D3BF876679A81DDB7EB456DADB2FE75BD982C383456F363DF9C072F64D3A3959ADC2844A5F23424A40A2E52E1BFD37F78C4D8B19A4740DB376D2E4E43A56C7052BDB7363D68DED8BD859B3AD4D3D2FE0C48E300885130E1A771F945FFD5A56C4873E260B90384E7741882255C3CF5D263F023949BA7C8A14002D2C28DE418394E60B845307858C1FBF509C6C4B6E8F27E81D94936DEF67A364F4B8FDDE1BFE4D4F98DC607D9646A5E175296C7E27E9D160A10C78166FDF92FA5B5C890F35D60F63424F9A3C9B09A98DF5A216EF426E360B582D5DE078253DA28B061748CAB749A7B1FE6C7C986311D1F5E7F9CD1C7661745CBA4AB26846A3E15109FC045EA5CB026514FE07B3FEE62480FA6C274A020BEF418AAD6136F4151D20D26C0EF468DB478C6854CF418C45B1B1AC36F2D17DE2D274DCD3DA17BD6C8C04D2908BA05D87CC4A01D6852E61511D53FA41B60F9BCDBC26C3E559D05622AA2773B9E64C35BC512D24A8B1DD17832742BF9CDE4A18A634CA7E5E769C3EFBA28B9B4D8505C3AA0960257EC7983E9CE5AA1B5BE75B8269DDC7BAFF0C0B637960B77C8B594F99096D9BADFF916077CBD31CC896EEB28144D8C01E6DFA2F0523B6FC1A3CA2365F86E6144B0653D38B7EA31522DB8F3CA68FBC187C64D9E3CC531F8F110EDD2612B797CC28ABC71761054065F5DFB90182543445CA675D18ADCC22CD4757ACB6780F0A0601911144DE1DEF59E7F883EC1538C6759FACC7D3B93F90A01310FB402BCAC107CFBF8E1DA0173E7203B07F55F301317E55AE66740CADF06CB0148EF10E01EF6FE7E936749993B1EA0633CE3450668A63B798337F29D3C8DBD59DB2575CA7C53D358FE14159EC8EEB5EFE4ABAD5B2298EC69D5E162709DD43373BA460297BA8B1BFC8B848C4308F2C4A83398AC35D6DB330D6D10F99660A3317AD7BC08C80FA6196AC163E7D43DAFA469CF499796680A743C075BA0E499117007343744CFC70BA97BDF01C1B86D5BBEEFBE3A24A45A041DDFFB83C341C76678CC51E70B3FD7C9F19DDCE2A9678ABD8CB2BFD0056426D1330B4701BBC2BF52393B3492762BF052680E33F18662D9C1A32A7FFD23F32188E9BFAC7FA43B8EBA6D4F9850775BCAE4A8693BDD640312845E616C4BF70DE73586444BBEABD116E59A389F0128420FBDBF8D41DE338ED3F2606E1774BF94B6B2C31540887632CA14457C96C685D4099D6A51ECC0CD9C5B4745E6AB80EC3F16D54BDA203669FFC3F800E6CDE0259BB0A0BB956B0945D63A43D1E07AE46AF7306312CA57822A479C24506D528A168318EFD26CE5C5AB6B2C5B20403814C7A27ED4B0B3C3BD4B5E25BDED32909454E90415B4736CAAF1B7F9D09C252A21563B841568A83CA26D0D0E37D54FBD4E472C52049FAF933D29C1BDEC22978DA3BAA55E6CC4A0C2598BB774CAF2A00E0DDF7EB3D444745DAD488D47AC744A299CBF283B05FD050BF345CFC8C5B08D6D0BA9C29C078D8078EF97738F2FCB78DFB71139EA739EDF5649231EA44676C33F4D965C1CB8D831CB9990D3BF0CF7E0BF0AE31CD60FB0AEC6DAF7EEDB243BD0C01BE77A8D7A243ECAA486D3CED0314D1587A6EAF9E25C051E72D100D90EFBC35258E496A7DB9A55A68E1EFCE2734417A469AE5DCA22AFAD6BD0026AF68F129583CAED2F4F5F0E6505732E7B06EF797CFA0B4028232D846933B3C6A182229053DE3C581600858000ABD0D5F7BD7364F2FE3D513D9507C0FDF403419C00772D0EC6C5ECB635D3B638877578DE2319D7FCA1FCE3F21AF39ABFEA5F724EE105B42CB03B08C18906510EE31B1F53DBFBFC6309FACEE4160EBB18837E8EEFC6754FFA8D94F05372968ED40FA13B877F3D4D0174C7F8CEE984F50F0F9AF0C4250122A8B4D138F20BB08DB9BB84F7B50EBF430633048B0CEDF4A7FD9CD9C91F383EC23A3BB1ABC2004020FF93BCCB7F0C104274FF93A12393E2B28562F30262FD313BB00BC1FACE7CF3A6AE91BA2A57946FFD77B760862062162C63458C9A12F898EBFBD33409EA55D12989FC15B1AA07BD2F9D14087AA755BB209035FF51286E48BBF6FFB9019FE286D19ADA0D63B5C22E6559AD1E71400B20C2EC5A2FE55EFB51DC7145E997DEA00958F130EAD2B7A07B047D9CC0778293DD72F47EB545114DA1E6CED1941A849E2F97EE5F060AF02FB9610B205787A8442DFE5FA0F1A7F8BFC732385F607EA2D30FFFFB416A270BDA54D671A68EAA0540EC0398F0F532CE13DD1721F7062481852671DA220A6564735F1F25560B2303D09D81DB9A151CB946DE626CF4ABC237116441191BAA75FDA150F371840EF755193C125EDFDB2C962F727A704AEE81647B42570E68E4EA16624E80DC516F8C2FBD96BC5BE150BDE9633808EA2C697344328670F6A2D6AD8EE7467D149430B5B18F7A12A2F7EBF8979CA62A968C7678E74CC3DAF2E528F6B13256FC74CC46C6DCB5E950429B4A73B4B2A3F7FFD0923205873C70DA9B75C0BF3D33544B074465716E74B4F8CCE1E7169EA39F507C499CA6026458C5E397A4DA5D01A6A67465010BAF9CB09A4A6C76B623C7B3C663BB6043CF89E528BC0D350B617CE527A900C779AC2331A5505591A07F1409459638FD6EAC10BA2A5939D1BE5865321092A93556A6F7B9E3A0E1A74DA1F8A55C32CAA75FFB7A47935379DA53ADDA1D0AC3B096B54339DC55073B28B29B43D867DB8732BFBAED7C4431CCF863C2E48D43F7D71BC49C65A4B06B4EC8068ADDD4C302FEF42286E571F0FD41FAB784D2934818B3C23489631F05231EDBA6A9D5B600D2DA6F840B46E4D67A4264862E3B658A76463CEA12B76BF0FD48648B3962BF7430D00FCB23AD5BF8362BE4A793841C3EEBD0F69013442035D7C37586E7321C753938D6B256EA12410BADE894D0B404EC70C1D04C6A2A27071F1288C1790F4169F6756C3E2FD404668D13CC2CCA7C3A51A52AD27A8FC7F56F3A81634D116AE49EAADB074F392663C0DFBAC77F60CC8630BC36683C106630E827FF6A757A97C76C480893EE53482DEAD9B856F3A951EB44B5BCA0579B545DC75295D086813793FF553018B04FF6DD0C81DE9BB1DE0EFAB0F21D9FB50344B7EFC371013AFD9590ADD42FF17D314BA295FBE8EE2588CA681D86AD2C9AC16639E11BEBF0F826A76EC5D7B55EC33DF35480F63C75BAA5307AF81211182E704612E90E2D833837C1300872C46EC56B27B7751FAC147ED2A9232203A6C09E91A94307E0A6108AC635D164116EAB701549E780453517F696155EF0EA4F78BAAA8BE9A729C7FDC7C1EA2849BA963F3FD63EED7B7707F033751DAAE9B7E4B90CC32DB9667D75C09C5D4819B19F865850AB2A143F809AA70EE0E96C6F3A6A75CA91A948F48FBFB24573FD072BD64353990E248198E0046F8891603166E33976E403666D1487A237120856684718C2E4E998FD94882A0F70DFB509D863F8A97472115075910C4FA071959E972CEF61C2268C84A87A99F44E7235B72ECC6A95FF48692FAEFAABF4762FB64CD183B24B5344E1A9F7E933943D941DFFD82D091C46DB1F6B15D2161D001EDF474E32AB8CC9C7920854B7C9CAE5E57C5DDFE9B9637D910B69C7D52637521E555984AB39DAE13520F0340E176C7679896BE74179D454EC487E21A8F349A58810B89132DAA6AB2CCF83FE920F3A378CDFD83FA5B9D4836F1BEAF1F7CF90F22D30C0FBB7A41ACD98D9BD37C976E652307C1B881ACF45E2D0C3797568EEE46DEC1394779621E20E4E86BEFBD875E1CF9AA3F0ADD91E3B8D39D700E2E92095285E357151519BE31667DCB6D2AB4B6C6A7B1BC7408372B4DD693EAA07E6C9DBF2AF9F3063119CC367B4FCC5E2E55E46E52F8705B315AE3D2FFD7627FA6C88BDEB1FF921802B83931A8F77262134F77C1B748C4EE9B834AA7DCCA3ABA535032600C010A2F09557FCEBD603D58540607FB0E4642A2EDED9FFC08959176014A295EB98EC370A3BFD60FD8DF11AC40E6516001A0EB5B9AFBDF144FF0DA302E4DE63857D87E94696293449DB609D7F8F1D30002D8A5D23DBBF6D33289713AFA52FB8323DF4DFE35076C4F94A51AC09A4830A1D260FBAA1659E76B1C29BE3CD60DB947B7F8557A4397F3FD476F5BF88E9D25EDB8240075B6DB7E8B1FD6673D6CDD3A95601E6B9439DCE146796C001C83E512CDBEC5259BFC24F7E5AB49199683CD714F73591A14CF36ECCE93C7BDBF2EA7D17F827D08E1F8AC6E10FF8D492CAA9A3BBDFC3BBCEE12B14490FBD6254E832B8BD9EE72FD3BD1FD1C3FA33D1358FDE9B7643B2BAA5286916BC947B78B23CD6C6871C2B640CD41B789EAE6C664A6C8E45B0D805A6B0F14B031A1A592ED5697787E4BC4993938022FFA00871FF9273C7A51E3CFFEEAF6E94CFD0283C8670958312FCB6F7124FD1CB635142AB510401372FB909AB04FB43041B6E505CD95911168E4BF26EEB04A4DFEEC9E653FD01430B3CF7A37049ABC5C6CC99E599971AA6EC85CBA30DAE626368BA18707C9E2E1AFDF7265597369949C621B02FF5118340C77C0F50263612FE9FC727F66D014B21D2CC3CD93861AA1FE696463439E37A1DFDD35EF0B59AE72F47FE33103453AE9B81C5B1315DFBEC1F938BC58B9EFC9CBF608F4B97ECDD280F4A49F0F3062C5849DFCC254BDC1BFC255DC73B8A71E73A1752636019ED33CC0B1903F537A13DB21281C8322586DF2FBA4D734AF910CA1B2EB540E5AC784A0A5759E312A1C16DFFE02A2E76E976C26E1139901FEE4A03831EA474C528009D098B32663489DCBA9B0E5DB724FA6F3D8E1A65E27E9952411D7D02F72D459CD32903655C86D087EDB6A6A5F9FF8D571C92512E8F1831C2110526D8F59E385A150E7BB049A7207E859B4E634AC98F06CB77FBE7628516AA7177DBB368793796291E64DF10E729F97C90B0484D07BEDEB10A4FB85679F93CFC5F0515CC7FD5413F157D101E6FA8E2DB3EA917C226BB9A69A59C47C605B2A1DC39B9B980A2D72A711690D8811057463AB20C1081614379416026FEC18966101CAAF3AA497B818FADE8E2FE3611BCDEAA4F7477C2C3459FFE494180C1E1EBDCD53007C54A8E9FBE07AC56B069557C14D0ECF536B34B3A263C67FAA0469B983E0D7C5F09B2A50DA1327B9859B26A67D01366F19E71806FD504905318F104D552F73477AB66ED7BDB391FDCFD66C09D0A01B0A8E8E62A693C02D23D247C0DF959ECF471B4BC933D6B838FC90D432A4DDA1EE8D2D4DF0E649D3EE9ED967272510AF65B0970EED5B9DAFA061E5D1CC9F1C3FACA660DE09D2843D6893171B6AE9CADF272206BFF9F114D17D8324869063AD179CD330E8AFD831796A51E8F2C28C9253F12E21DF7E7FF18C633F0E7C77EBCD4AC50DF5C3F42CCFAF2A778B62BE7772D78630892409F767337034E4CB6FE2B2F9C4C09C3C6B80B47204109B2A832F818243304D2F1706C8589CE7A9C066521EE01D35C7F0E72E52C5BE88312553FC711B436441415639CDE7835D8C29CB64DBE41B3C9EDCB89B0A43E8761005CD97E19224FF4C7DE0661F3EA30A973D1DDC75D3D0B738D48299EC8FDC128FB5505B65A0C9A9060389520EC189DFE9DCADD9DF6AE9052CD0EF6AC5791B6E6EB5E5653EFA42C6A4420F45C5E3F93B2B73DF689241BB9666F61461AF5173AB8909D9ABBDBAB9DDA3D3BF66A9D493033AB75EE2003ABC38D6367E3A987AC4EBA12D7BF2FAD5FDA3EDDCF703A48DF6B4ACFAD2BBF38A701C25337F21BD10C92FA9C23F4EAA1B9FB0B55AE7BE2ED82798DDABC1368761C00CB601D9718FD3E3A55426403C9800FD686604B38A57B123C80FCAFC90C51D506072088DB927BC6D1AEF905C672D449176D36AA63DB9AF1210CEB7BF8628D5771EB43A0565E6F36934EACB8BE166DDD3252DDE9FBFF0B67395D33671A1756C0D2158C5364D8C4E37D382F40565DD2480080BAC2DA570478C35CBCFEEEE73FBBEDD214BD982FD9FE2DB168B20D62E068A85F5401A1092F16B482FAD794E1DA67DE24334C8C3C6E47394649763F3D837021B8E64FD15FF18B4ABBC7B657EDA507E2EB581B7CBC2E2A8B8EFC214D06D39D8DC57101547A602392696B38051DDA2577572F3F831034DDB609BFB64AA314E4928CBD338DE4C407D3B3DF395369BF5548D7F342BC646EBDB927E4037479AB20176D4CD03EFA80BDE44387CE453F66ADF6B91E8721A6ADF9B808E34606A7F018B8F5F3DCB5CCCF10945B49E5BB16240CFBB513C6493EF24B74215CEE29B7A3F440E3F8FD3AAEA5F37955ECADB6F85B18AC297956C5AE04D7AD5928295D4CE5CC21DE3B6C497D58A359485A1ADD6807C7D5F14B43285FE5A4F9B3E6B4E0BED95A10C1FEA07BA647069684CB65B395C4D0112C368E73D432BCBE60B40FB65877383B910FA993C8293BF22ADEB0388B3E8A26AAFCD33B077917DE1E2ED2D3E9596478C39EB7EDC529F5A3E469302724E90F35F587F68A27E98A64A0CADA5BFBE4CFD41AD9D8606EF44A518BECC3C88A243E92EC775E9C967901F30A962BABB49A881930A1FEE9E0BE746182DB86B93389D8BA12A57187D677E75727B40DAD192A753B5ED71F111642C9A6424E44BE3F297CB8C546C40838BC3EF29FB415B06B559D336E64211F9DF18E345773A3BA199689BF26D457D3B23A646F6595912C0644246DDD78131013811C4088223B3D955E8A3F8128685F2A3D779777CF85903A2FA5ACE4AADA15D4367AF9F91227D2F199A7F91B2326CE07DF500826473D229534BFF2D00F1B1276018D6DF32D3E10BC583D32E9C86C7408B09E8E8D56FD6DA69F6408479AB6678363802557648F61B63CB2826E43E6FB9DA2A8CEE3E5FF7992CD8F8016F08259275363024349491FF1F1CC7D89BA23F096339A43C000352D5F6093622CB1903B4FAFD0A555792D33CF79A6D71B77A4EF700AC65E6E2D0778976DE7CACDB79BB08F82D0AFA6578565370B7BF66381958EDE4C24BB07B61ABE6042BE56F725EA3A163863BEC809BDD0828AEB6273046B6319EF794E9B17C6A4046A817779539076EC749227D1A70532046AFDA5FC08BBA6ACEE643AB6BC8B3DD8E40118D90FDAECC881CFB47FC05E0C569EEC0C564C431F4D84DE98C11D4811E2352A33946E159FC2024023C27EAF60FD6E70FFD3BA71B6CA41179B687A104C5C2242C0DB901EDFC8244FEC9A73431AC4FDC7DACE54ECD9D7121E6B3404E2895D20AC62FF6E9E11635067DEC0D89CBFE109304CF0A43E98FDCB798988332DBD832879815436F36CE60CF8AA6DF854462CBC6791D163CF2188C2ADD3E785347FF0C99E84664535B4085BC6ED63B769F60B52FAB30840CD90063633D24BDCFEBFEFF202EAB844FE4E72004A82195326AEE6DDB3094464C2824DFF6EA0E8E5D09F0B034D5125FEBE0D3EC4FDDA535129351904E7C83BA5E56BB1C9C77CA80774BB2F6F2C784FA8274D8D22696D6A5EDDE557750CE7B578FA2DCB24B77F3284913A0046F6C9CF002C8CBAC109CAE8B35D07CC1BC5653B8B0EDA05C5A178ACE1E79624F019D5261F70DA86E70D8A3B9261EC5E18B7BC028B75B4114F3BD3D2217C803A725C5978F3BD1175849AF8EA088BA039387E2BCE74EC17BE16560A12BE2E60874DC61E624E2CA42987142060F4BC0BFCFBCA98F3DCAA77FFD232AC2A9A8E6FF038A4FDB69441651B3EE9DF7AF6CDA0BF21EF6AB1581AEBE4470E45D20BF06648985FBB9483D066DA9A66BE959F16070DE8EF9BD3DF9298BDC67C23D63CE08F05A318A1B51608AB8A786674EDEAEAD2A99D658109D580E11831697E6CA6EE0A7F16D3DF4FC8D24543B7DC5198F71E7DEDE7F8453FB80EB38CA3EE467CCDD3865E196343EEF386BB93935CC63A272BFA4A8649627386ED0DEE78AF35E450666CD6F5ABB62663CA119BDF68F610EA8C62751E367FDC2C3AC936805D25D96542E11BF7AF774604B6D641CE1E7C1A18B0D874A6115DBE708EE5ED51BC630F901C9D947C6EE348D9078BA5375898BE5BCC294B68AEA1F2D1198FA23BA401EF77E47C83DDBACE91525EDD7A79AE493BF15179974041D6C794F4EEF5028A97F878D1910AC9DF9BE3D6D3254018CE4E5EB40CA8BE89DF33E2E18F1C1691767AFFF124BCECDF4DDD02217FA4CD7AE8F24C78049F956DF8B471E2298B1E566117680586F64B71F6BAA36BAB8054C7C50B9AC5F8A6D7EBA7CB2A50C8AF15B87B41E2F14986542D81AE51C72E7AEE27A500B4E6D9CDF2997588E80A02A51B26978D4E893A2FD9E4C547BF013314BACBF868DD9B3446FCC4619978E68CAE9E2631BD0D86D80166A535F4285C9EB9300C557E36354D72DDE1C3F040D3FEF8212CFB45B6E7958D931F07AAB96550C603F3A2C4C256EC7125ADCBB60CCF3AD9D2D939C6476595123E55A0EC0C18105DE47E1C644D0D59B081482784F03A0B73C6BACC074ED731EE9FE9CC4CA700CEA5BF50C7E37975D4F629AB5D330A15824F6B29807D2D4BFE67F2CF4CB919F7E62929DB2AA8FE92B341AC9C449773956456B731E01B81A3493DBB30C4C43E900E2859D02BCE618D29385C0A9411B73A54E9530BB569AE1AD05C0873BB984AF2CDF280CE67B3D1AA62820569B02D56F399DCEE784B29B0DBC71B4303FE640ABF711726AFBB862CD29312F6DE16D9C8DE819989F871CAC4EBDB0A2EEC34B637ECF6E6A71D936BE40709546B22CD50B46EB0F6F3433325535ACD9F3E13EB838BF195DD01CFF56624C2FA1D5FC2E96CDB0877CBDAA04778B14D099E28653B0FC2555F80A7CF25C4D0B3B839EBBD32B567F4F2D53047B8C7695D8B2A59693D0F4082985B5335698059EB65D90672F525B5376CBB004905D31F6C81250857899043E023E49172913C84125D3B21A8A0C2747B5CB4507D72240607FBAF911B62D291309981AC9B1B174F19AB827956B734BD5CE116BBB49F720D4566175C73CCB8B7BF6B9AC71B88F03245E90EB59439B231511A006A34C4D672344F512A570F1F23D51113B3F4F3603F2A197E51E1D8A6DD2DF46FCAD287FE67472475EF925EE2E5DBDDEF47DF52676052A4782D4B551A3B9C43AB1E9CA9174086EB9C07AF3E6C52D7A2869BC3B9CD5D27E0793743B93C6679A0666FFA9137FADA28A9BAF7E771ACDCB8030F2A3142A557D2AA218032C2CA0870704E89B6C735646E2404BA57D5C2BAED02283B84DAB9F57EE84B89A92044030E74BDF260FB398C20250349743165277917BAA47805A22914E6F4D529A374474B6D5A18A390E7E94E58C5A15A202046365254318A9CF206CC40C7805C27F732B605B84DDD6E0C09883304BCBF838818ED4B70B97CDB9ED252D7D558C46D14AFDF7C3F04DDF99CF35F36389599AB3E8012B8390D8D909238B00F681D2F6228DB6B8B7A3A4A40295D7A9DE2B48383AA8C3FF7F47A2E28173DE8B200967224CD6D6BAEDB8DC1D5411C3021A01A196F856E9FC876C236D5B7F280950C88327D1EF9B75A49F6D54D0D1C5211256FED756B12A0269FEA5B51B71A5B0F39230861EDBDADFBEC2ECE6FE4904F21C171CB0D1D4A63381A5F234210681F03B07E57B834A40D25248C140EF226279782DDF5650ADC32CA5B172449BC2423E5F758248960166EEA9ACF04B86B4D9F819E60CC4E307AD1C864BE25F3707E624CA183DC84FB35D2DB9269F16145DFE3E604345BA9A050050B7F78B2E4C2930416300500E21235B3607944A6CFB08972B9DCDB8B8ECD46EE5B7A617AEA1D693E5768F65C0789EA684B4685448EB2517BA96AE970373375C6B217DF4DC22A0506C1786CC50ADD7121908290092DFEF157DE3679598679C255CE4B72F208B7E5A866B7ADFFAD4A663E4E2657D718CB6ADC6E898136A8BB6685E8EE0CF14939DA12AE874D580C63CD1623858ED3DB6DB6B858CE7298617582206EAD1482E494A029304AE45CB462653A36337CA639EAFBD83416DC8BB76099FE8C98E71B5280FFF5D4CAF906DD3512DF6D9349E8D9B4DA2BC30D11C48C5C59CA946C02920B9D3C62D1F50821A496C61FDFC2A7B96D13292CE49B8F65747A6E7A1708D825A9F084DFE5F55F153EC04B459F21B004720CD40928E86283B4E76C3A4DF842FE896B4415404A530EC0E6C025076591070E78BE39E2F8D6869E5ECF98EC2F09B429481B5A8596998BFA4A73F19F21767FBDF8A14EC3EAA35443150611CE7EF98F552A72B4B912B005BE5881E55693D3A5C59DAE9D04035963A5F1CCD21F85C41C8A8C79541E7E3008090E544EE2681358358F2C698C9CCDF06B61F3066989AF92B3AB704C9581489A95A967306E611C8BE28DCAC30AD30DD7D2A2D3D181DA5E88993DE28B328CB60F2A8D7A35290E50AC410315E061FC2BB52C9624869AAF98CF0F851B001D8B7BA746CCC7519FB6532EA3CF345154D0F242F17691EC23B1595721BF5F162190FA4FDDCA40451D3BE2BD1DFBEA54D4DB95EF7B064B09A94493131C0AAC4DE5A55E0C08110BF64FE18A4CADA57CAF6B9AC29065B0D6C160A1FE2BEDBDD2CE49BCE3853611182C658828585835C0B5103146D891B1A9FD2BDCCE92794D6B3CAADDCA36ADA1C7C9D94C19D67D36FDB4CC4584F7375279DE9CE5777A7597072AD8F34F1E4AFE056043083FEDD63852CEAC95041D3C08395F1FB780582F8CE38DAEFA036EC63C0D29122674047A8670D763136A1CAC8F8181751A2D6648B9BA6629D27219C12396814763D1BEDCA47843BB9A65C24FFFD5AD631C3C43CE3AEA643D871C42329A60BC4AD9DD314073A917D5B403505F545E54280FD73ABB73F2C3A74864B72908FA7DDAA0D1665AE15268DDFEA49F65D32E5BD3A0F2DD0B10E9ECDA013FA9B94C7A65F597F9D70BCB3EEA373C9E9408C0E749BFEC0AE244ABB46C4E2559EE54DE041119FD3249C3844398B2776D3B226F7A05BF2E8D9F33CE0E0689B96CE973A46C915119C55CD41D267C0B3506FB125B8DE53D7C0EBF2F9FD13AE3BEC67F0EAF6D9FEEFAFC7B48B8976F3D7F4780CE9E6F1AB3D6FDB8B22EC21B18A1213690753D74FCC61286D2BE983EA1093995B0FE9F593DAFCFEC13A80313B6894A86927F8F28D9E9FE4AA8E359BE4E9E3ADE94689E6A7BC539FF25864EC3711CE492336EB72E85157EEEF4E93F00D98D2C1881EB1958E1823E2739CC7163E021690DB184071987DE0103A09942F182C03247DBC7A3FB5A5BA6883E4D09DB0F9909B92FD31C0B95F6A5E015B9C6205EB26D60C079D9E1293EEE4053FFBB4D2860AA559B7AECD7B851F68165462A7F15A90F9CD19FA2EAAC9A2E80EC7C0A5CA528ABDF5F9A9827FD289FE76C06477ED4E782080EF8988BBA45885B79847F0CEBCB90DBBC4D9981879CFCA9262D6EF234C5951B2BD38D568653B424BDD60F440B7ADFA73AF950F48E1185A0456362E01A755C7A3ED668F55F05CDC987EE9E4C1C67195E9C067FD9BAC544CEF37909CCA8F9E6D40D1D913E9F1B4344A5393A2ABB6EDC86FA0EC3EFB09F34F2C274DF9518031BBE2BBA7278430B7459416B29882F96A6623B2FD02569F5B296E29D70C265829D6533FF2FE736F53BACB7D18A5B9841137BFE71FDA2FAA9743D488EB9A6650F00E17A77638D41AD6794B64E7BEB3EDDE0EEFCC5620D1757718ED3FDAC19FF0147B5805EB615A5186F66C0D2E73ABF6CD59ABFCE587C665279AC02C7B82B54D07A4F08F33B142E35F3B5C5140AAB397B44E894B7DB1E816348FBA16207EE0085BFEF327962DDAE04AD0EBC489D741F6192278DCB51015B9089B986B96BEE4FA49837C552C301822C094B229D52FA00A521127728AE3CDB67BF984D1FD2D9B9A3A9D1F5D0C0FA123E529DEDA28EB7EFDB6083E432CAB13CC7414CF15D09F2786BF5BFEB364AFE94AECB07A60502DD8F99D527A9F397AAA64817E6459073BA57CC4A7886F117BD94363275CCFA8D5CA1E4D6083F166381CF27C4910E67FACD26A68811E0FA0AFE2F6086315E03A148EBF3119EBF0ECCD7EBCBBF45E1D1BBD56FFCB1A04EA885BD79E12EC4E237CADAEFF10AE9E40216F0CDFAF2AFB161984578FA2352DD321FCBFE01CA0A25D0C958971FFAF25D5414CCD2EF1FEBEEFF4173926AFA7A07020E2B1A8DBBAB3EFB610EA63A03BDDD269D2AB7262367CFF53DEE76FF9FD962C325DCA1EF085EA821D57008753F7B76F34A88D7DB3905819F01E2828AD6627AABA70DBBD3A1E4401F70AF083F3AAD25960569D5CE317369A510F0D15847760AAC06653159D9413582475E2745067D11C8BA67E72895924A0B094F2C59A468F7F9A6A2C793FB932B0D8CDDE2A8AC5E3A061FC88D8ACB33D515EF819490EB4A6FB6D0A724CE5E3E2680E7A3C785F9DBCD9ADA15A3C46CD4DD8A933AD34883EFE98F64A25B9DF71EBB27AACF297A6599C11F2DDE2AD08580E2408F532343F6E04CB904FBFC95BAD98CAABAB3815D3217CFFE7BE4397B94E44714AE0ED05BF3F044617AD26EA200DC220EF03B0C7A85F82ABB8968BBC49317514C163264783B6B83DEAE76CD02B663480171536373888527AF9F84E9C668FCE6888E5FA33D10A767B1A152D340BD4A93A01D63B2E8447C9D3C6D20CF6622685881B6CD84DD34C1A0D703A26343ED28D0506D7C7D0CB3B8CD7EE4D4E56C7289CFFA3E4DF5F00EAE30B172C8612F68A14DFEC1714B7C05B7B47C7CAF2E903BFF38620F480223B4815FF4FF6864399E925A9F858AC18C329C5E46B26812715E2DBACF2C8A23EEFFF0AD5F31F959B065157EF5E25BCC911609CF787DD718A4C1B23E38CD8948B4766D2D59296E715CAACD111B719BC880C38F18C340D107ADA230F55E88BD69189557E3D3B3B867BABE9BC0C73D596EFAD8D15ED3F6A308D69217A4E2C7965DCF6D5302C0057A4FDDDB0DCB5B1555AFA53390B7DB979E1FACB5DFADCDE2C9C2B8DF97AE21C5BC63AC8195CFFB24DA9166B8E1C68E514C7F4B4D4345DBAB1B16657920C6E7BAB9F81C2EC6535FA40CE5B6C49F37314DB4B432BB123612F4C3CD6826F0E45BFA4FAA605BD62386D43D4371B3E6C018EE9C8D7621430E10E1838CC9F887B05595F0113272180F816E254DFE3047A3AA5A20CDE83E9418948388867A0EBD4E303ABEF722AE7456B898D6893DDB2BCD91F3A7E02A41BBED6DD56E3EEDFEDD9EA19B94CB12A6947FA5BFDC87DCD0F21066356D462FBFEE3AD98836DFA46892255D9269D006A5247342B2AAD359F7D2C4A10C01EB3B9CDDC683ECD023D22D0E9A1372D33C30CDFB4BA5319B650A2A5F3EAE5CE0C082318AC5112A1E6ECF7778BDFD80F54F6557250D991228DFC2030AD6A7ACDCF48221B7C4A9B9C58CBAEA14E9C241E12C8DDD3A1B9C5F2BCFEBDF1F9CA9E96B5DEA92820E6E73127729B50194623463D19E28885DAC73013830204B01F96BA2EFCB187EC3CDE9ECF4635A4D0DB9A4493475D7551F8A1667CFECD1AC464B09A0A082D38664A1FF4590DCDF26318E86A378917B666BBB0FDDC3D3C2A4EE9D99C8FFA3B72E5C188C1B8FE21D6E5F290FCFC2189B6A7819EE9143F53B2411841193445CD0E53C38FFC61495DD3326FE66CBF40783A3AE16488602E1BD95A401D5F6A41A7225489738DD63E4F3CBC97C19824BD1ACF36155AEE5567028F9218C7E23E8142A3A9442E46EFD233B5494CE9A30C6DA84D25C899416C81E1955D438A01B285F70693C88C39A715BDDA3E82C2D6F5005A7A56A45E009667F8246A5B6163B4252D3A5424DE02B6F14BBC5B57B0A063B0E0F6CCB2DC04F27BDBA68C60D6806448D514A6281066F092B4481D42166A1E7857F58A8EE6E6B06C62826096465E9FABF2EE739DF3C5DC555142DD1A1EDB2A3DDFB7712C8F1DD70D953FD7D7B556313BB91B14F2643F09549C2199C63E9308666CD941D2D8BF448060E9E3CCDE91C8AA1522DF7FA778E3669AD2E487C872C2B68F7BE1088D4ABD56B6CCC7194E9E349E142F4AA5B1B3172A7CEF712C282844611AD6D3C9481C6BD7E8F23CA90A5E419FF61EA576613F9E5F3DABFBA05436B8362C7A8B7A6C8F33C51B471C4C4DDAA273B01E13E73DB006316C726D8826CB8FFB966BDFB726EA64DA6E33A3F5874866D8F34078DCAE55AC26512DD827A289AF8E1A9D95B88B9FA9D0585078D95385818FE435559B19E64D4C84AAE7544B13C9C5833053281181A8F7C7EFF959A2C3820433475EC621C514193D18E9D99294CA4BDF44351B73E62584F440FD52BF4398987228D1535797AA694C89C59109B0A31B7F9073235FE9D586BB856D98E01B73480654D5C9F01C7FBB84AC9CFFB01534716BAAB640449551013BCC027A889533E95C221A367A38C7788CC25F6EDD035800769AB4D0AD6A6D4D491B6E994A8BABE10A6EA30E21AE31E4AF3F4CEE7E3643B32642ADC3F1E77F84EB190FBF9A954EF9BFA8D7507EC400691A96F655CF795C3E57269011E8263D97CE135A64830F5906C4F428761E925B24D48AE0B9A25D5EF8CE562AAEAD3213107A4B40F2E665FB7B2D44910A8D68586393CFF329D37551591C23DB37E7B4C0ECB9A1DC61455ADFB4F271C16C1BE4E22C3538BC558E89FB98D9424C663D2EDFD73F26A8DD9932A465A77079DD0695E080DBB784250AACA5387084DFCD08C8B2A34EEE04A535B8001C396AED3963AF292781269450359DA1676309BFFE4FE124FDF45A46AE1A7C5C0E53EBDF421E14D66983CF5147ED84C8D672616D81DCF046674647021B84AD3CB38BD2F1CA98F7A34A25E8A0C23AFC0156AE756B244AD9C142D2FC36E799EEEAB360A1E1E4A8B43C69A11753DD216E2A96CB6A06636FDBF8E6F115CCC076CD4852ACC1E6C97AA1125455C0A0953E6FF73FE5E3E57E28B5DC5DC4ADCFC9EAF26A2D6C118546B0A4C33409FE11F46E003EB3D0A2B046FBB579531A663823A3353B3FB64E88B1F65161B3857AFF6F35E128B5A2B9DDE175F35FB5F620A0DB016D4AB36D09A3CB2B9B479206B13EEFD41B46C56533C18056D6757DB9D81110912494C15895FB04E1DC85EAF7CF55E4473E616455B9ABDCAA1C85174752600520C65C98FE51999CB809F827F599E58B3915CB6480231E88DC2DAE2A638C22CB6C308AD3427FE587CDE8209D1DA2879CFB6F5AC2AA879F5E3AEBB4759FE070CBF114D8E41EA73F370AB8002702A237B3E871CD430E36D2C507A5748BB527E579D8EBB5971835257856B76DEB1C5FCEA853416EB13D06F9A0E1A9AD6EA43E78577E18B6D69CBBADB89C2DF0AB7028EBAFE3467700DACE14C08A002DC64DCF528B95BFFE4C7A315F0D85891C04FB376F27E50AE2E0C404B21EB16A8E1ED54B9DBB9A723F2AF1D068CCD7D28E99DE8EE7791AE09D47F3D13E45957F7B89922B69FC6EFDB3CED221E81D91D23EE31BC388AE9CB92F7735A5B973B527D262685FA5DA1E5592FD9F73BFA94F9E074C6B09D3C83B834C0384FD1FAA3E5F92B22C33023CF93DDECB0DB8F7A79245E3522D3257AB763E2E50429B5C17BCE2DC2F288C6D8F51F13948270A5D29E6457E4F42BF5F8AFD7E1A02B432B72E20CCAF990DC6506EF6BCC31D0E72F4205BE391539E1739F29BC7E49326C549EB3751EF577F6D81FE1B6B5B2FFF598480E8F46E29F5F904974495EF0C2CAC3F5EBF90C756503C9FC2D90AFDB5C3661BC7E3EC4C8ADD1765C2118C8F11AB0E678104BB7EC4CB7970E2DCA3EA868E41D92B4A6DDBB0AD4AB4CD1B37EEAD4E3234431721900FA80593F7F0663EA10A1BE7823C3E7D0F07381A3C188DC65BA8D020763AAB644B92C5BD48F3B794DCA67888D96F4B379A8E2FD10D02E874281EC04DCDBAF2F2C1977F0F781E02016F397DA0D1E47575D7C0C58AC68A36B87C7E5029464BDB656791CB0D80E30256BD9124E49CB3E8A44C47ACD64C358E53D821E773BDE688531999346059E8D82A07D18C48932111904C0A8F89460D5E31160066E85A80F7F10B96FB55A3B9A6DA0CDDE35549BE98D369CCFD02FC6A02B62C33C9615A381A3E6A6022A09D02510FDD18B512594538DFECE53EE7D9CEE17E8010612911BBD4B071964F4AA884A4D939AA674475E1EAE7C1818398BDC54B1C496E5B9C2597DF561557571B151E065B088953DCB0ED07C647DBF9FBBA8B79A481E14DC97539A91C14178EADBB09DA53EBFDD08902D5C3F96421A7FB6B39B867940672C7F3E8F7426CE2A57B52494184831E5DD54E463CCE99D3B6BDACB6CCF3D3CF183C8BB9ABC1E2A679225C72334FCD17FE307DDFFE8B14020009E16AA171753DA5F20DD88ADEF87D929573716FECB57F9B8EE2B296C5F69264B75A56B9C54D95A47628979DDEB90586C32BADC9A0194E15497CBCB2C52CCF47E39EFAB09A6F543C27F02BFECC9143E723096CA07E715EAB8530E2163DF5DD525E8C5D6DBF03BE8E42938D6B27A6D4BB6D8214C19E1E3CC91807471726AF162AF768749A8BBD45F37A4CD7570A02F7BAD13CB8B855876FB877B0AB6EF606760EED1042EE5290F27FD98CA5F05F2B8321F980E01F05366B6DA36E61E1208D7BAC49809BE5E09B2CFD4D65534E444AA028A6F403C64F6175F4FFBD99395339359416696080FE8225EB6B68381D29B6DFABA3EEC14D50FA62593D5FD3B1A1E1ECB966955F0B8D4D50A8AAAFE05BCD81CED510D1C7795CF4950E23F49D490ECA4961D02FA350A27CEF8C360F0E9ED4154996766D452428EB02EFED9C9084AEB125DDB13FD76B53BD094A057DFE284DD0A767452576F106AF68E885094D8AC3778672681BEE65E12C8785170AC8DB6625E723E3DCD020B2180A36031BE9BB802F190BCA22E2D99C07FFD197E5DD25ECBC569E1BD19024270238B248A5BFADBD9E456E613A5FD262490A66D3D1C5528DAA4FC1B9A712329821622569154B0E5F3AF9B61F021B24D5B0A0979EE65DCC9D27940BECCC27911C622736360EC3B4C1D68971059B285A64AFDE1EAC5FCFEC27AF4B521E4CAC9BAEBB0F5FD6EC8B67799825B34166E866C789921F730FB66773B09F3620BB9388D0EEB98BB471A8A34350136FFD61D4305D83BA1C439173481D3D16EF702A7FFCA7112953534197F4D8044ABC43011051E71E2D281B99662C7E873A6AD23DB58D656B3D3386F3D77F016C3A9383BA5A0B4EB0E003F3D931D5003F759AFCD3BF93DEDDA28C29B66EDF1491BF07DF2BD6CBDD067328AEE1A94078C9261A417992F94E0BEA3801746DF53F3C97F239CBB129896539954A18711EE7FDF3A1F4FCE8F690FC2E5B607A900230121D437DDF0343C0DA59722DD4D2C856DC05725E97AEDA582AFD1658E3DEF298B795B590F71C56D14ED34770304715152E1A4908274BF7CA95D9CAC86D6C2C40D916916E09E4B15BA6011D2E20974153B93A4A7DA52EB892C673D0A5C8108C2E3D3366D385F5136F48301B776E63C3F1D0627FA39BF7F9C8C8964F5408E35CF831D2C4686EE0D6607E3D92F8BFA6803365424016B78388DEE44B13B4974DBF891FE8731259A84539174D378655153664B3ED750C14173F4CDB1A0439BF51B83ABD35208768955CC91EAB9BC9782B9117D2123337482A78418950840849555418FDA7F1F08FB3B23862F99DF06FCBB3BF49D61B672623261C32F4C55A50577AE9CFF05A8716D465DC867F0962DA5E4107F92BA4D92ACAFE4392C19C685C8EFB3F6D7C9A554F02BB367E6B018D05F04BCDFE1E12FDBC317FC0BD5296644B1D3772B2C9021DDBA483F6987AAB2F240CC7F9BF6CADD1690BED47D09E616F2AA607E13B36BCE415B1D5CEE987BD849D9D5F99F50C08562797C773E86671A928A56D0118E18987D5B5B8892D5D9DFA9D35F91AFEAD9D9EC9F284C054B8CD2CA3C26D6FF6F9219F82BF857E67ADF99EEC551D3ACEDDBDDEA19D366F2E27D3884D01B5300B43BE05AEDC6483F3BDB80D69AF24D87C72D03D057D9D942B465AF4DE32FA3792879DC0F235AA9B93AE1AF115CF86E3744971621441CAC058F82B9078FACE7C385928064AD4E085DDE9F0FEF8BB2811A78E7952F9DB2059ED19BA10234B0873DDAC2A6FC9D5D1641D3A449E6B69DD25FFD177464C2B4968C6327D1EB72468CB453785E06AC74719CE7BFF6F54253CC35A8AC91E8CBAC9BB7DE54D84190C7163CF8EBE003D00D32D406ED95829C05B329FFA8BDFA6A25375E3FADE4E47EE5FB0822BA31178D0F146E6D8CBB12C0DE2701D25ADF0FDF8EA5AF29EE77967DE4D0A826A362A7085530DF2AA400888F21C7FEABB5FFA4A800FC2CA90B8F3ABCFCEBF26DCB0A9624709FB7C97A8CD6C6BCB706E6F411969F486C3552FC4D5F48908CF2FCCA2CFBE750863FEC858BC005D7C8B7C70D847FCD4D4358E370A284CD69040D56AC74EFF5C919D99D68451884D8AEAF4CE9838EA9B4CA1552FF796DA0F8F1DFE1186E297281261387C65C324AB92C29B6DC7CEA5090967FDF037A068E7C1B99B18F2E4F0B2CC9EF9F839F0E060E701A52612375DF66BE54F756430011CD49A0E1058950833B3A156322544DE15DB8AD4F45B6A617528738166D93B96A1167AF8B33E2BD7BFBE329DFBF70612FAA4F9275E9CE54616DA8A9F3713E0846E4F50AF99DD50B0DFC951F0A106AC06A7637E5C8CC1ABED7E496FB83D60242BEB9F9A1A5968ED3876791D65750D60BC2D8A924104013B2523E32296BE5BDB9EA55E2207D90293BDF1081E0C2AC658E39F6287CA3F0A76999DF2D355CBEB0FF44EF84AEAF8BAE280D4224BD54F69C0C9CAE16E8BDC494B4610A71B721AAE061E94AFC50948CD84E85124435C402213BB652545EA3AEA6DD91E20CC7F8EB150C251F501076EB991C269C0430199A3CFFA313C70AFA1EAA393F38D70C9B5ABF9E3B8356A796B5E128267B000B2AF9D2819CC5CBFF26544E842EDF11EE44E4020D2BD8197C20DD77F7F5701DB845FA3A140B273BBC4D62EE582B05578B55756546F1D184F6BD4D1DC0760B89EB2166311E185F45F62912ECF5485D99432A83F48A9DB559F06DB078D4D4ED73646C7F5B45EE01F661642F3F739FF24032C6F7EF558FE238CFC37CEBE1198EA871D860036857971D9DB372E28CC4E663E1537141C337BCE5704BD046AA01CEF6400A5755465E1ADB92C14D6EDB144622C8D102D08F8A1A0547CB2EB79DD66129B0C38B3A7F9577F5C6704AB9AD1EB0C03247F44B179210A28A4C0A5EB98371040269C37223ABF822F61822FA5A79B45FA7C05CE82EE762DF45062A788AD491281B5D20F90A81E52C52C28D7F07BD0FE590D690A2B1CC116D001E4EC4957FE4E6E68DE75D9B61DBD682C7AB84D4B66F096AB863D98B23876BB460462FBE2958EA7BF1BAEA31793152F8FCBC4946CE986FE3E8BCD9FE1FF1AA0EC1D90A9F1B6721D67D2025C031E6904AD545A8132EC5B97728E5ED30D8AD415DBA0BC0AE078748A11B423E346D8B3F1E26FFE4EAF375EFB57DA35C94ECAF2DDFAB46A882E4611146C3CAE55EC5E6FD1E1C71E6067EA9180381D1B56C2D247FAC20E85DE98F024D24BBA211FAE660752CED8D87A92C05A4D564F1B6CDD9D0FD5D5CA8355E2E4519742E7D45F3EEFFBD6F6437BCCDAD611E6C21E66BD1F6BF0FA30C96DD6F71A926031DDFD9503A8C7CC5AC3221C0C45D5C5DB72BAAA25C8197FA365EE2A3C897C84496007A42B105F746071434C3A9F3FDDA925049E64FA176138D4962E801E2B0C0AFE7F7D2E8B1827B902EF0AF73FADA91DE5C8266D42F56F91B6A59365CD925248A93A6867ACD4603A8B4BC5F825F1832BDBF0A0526966728E0EB279CED76A044E7F1A43457A231F4EDE72B5667E9E5CA3A8C65E2ACCB5D6F4D529B02F48841911DCCDFAA1AB58358E814C25C4B9AAD3BB76E4F8973DF4C3657BA14C641D672B82CF76DB612B27B162C7B53C73A8DE3FBECD88A5E892794D401F9A0348553C74A3BAA130083DCB391B41A98F5BD76E2D8A465645A02E3705C5F6F63EDDBB353189804FD03E821B6744F2911D731478AC11FF0F87476958DE038FF625863818F79EBE665CEC54D728F89EEE01200AA7FD100BF244A737C4370CEECB489EF11405607420C08B000FCADCE3413C64F2FEBCB85EC721DCACBF8344EC862F9BB46B9CEC8F5A9E4EDE2054FB236A7077C13ED3BAC1E8B77D43CBF87F7EF54AD3BEC2887718AEC9D674BBF714E2EEADCE85F6C6A62B033120E599F763969FD71750E0BF4EE45A77408798C64AE773B09A66F2156112A9E72250BC58677BC423A9BA9C9388FB7591426871409D6C4642B677D39D761308C236CDA118B5DFB226F83EC767703BA7687F5D5FA33B3CD56CE4E003EB095400A862A8277D8E1BC934304CCB6644732D95E144983CF14CD939022A83466573897E1D47FC4097B75CFC83075AE92A5203083DBDCFA534C9400341F116195A964D559F9B2D2DF304318F06546E386D6C0F6AA8453984D4F4EC7489EB0C6A56A537687B21BA3D1A3236DDF76E4D14473E898DB33F52A50744D395513142DB2A46085CD1A8AA6ABCEF0BFA33FEC6AE1EFCE85CB139A5FD79C458C0A5DF16BB2561F8E1B1CAC40C4C836DE79CB2892EFBEF6833529CB67507D7220EB6E38E25FED64F64B66959E6396A86C8E59693AD4283C244A5D55A602D325DDC7F18F25481CB58B4B0ED0EBC5FD115DEF84AB2A00B163927A892E55BB9BDD6C44075DA7C25480E472A549CAF45D37CD131C4A0019A80E42D6DFB5DF203FBF8637B021D321DF2252EE29C37D164D8E4D7E090E0F88FFBF6D745A765B5A35059DC4A55836AB72184FDF068A139C9680C9326FCB074EBD35C1125BFADD240A42BE501C3D64D1C02C26A16F4A7FAB9FDD07AEDCE05E2E13140F615C646CF38FF607D1FA3C34C1FF9D122AE55B512DAF08D036E9F7F3430751AB32AFE0431EA18079705C680A897A0921C78C6CAA0E932DDB2A2E20DE32326C9D33482A4CF2B4230ED4C50D71E6133C992680BD6FE0DB94577C997CBBF5CF6D8D61275CC5F3A3709945E5CC3AB1EC334D147152EF9C393D50B9110ECCB668B0257CC31E934E6340D30890230AE01A6BCC3D74B1DE0B82402A314BA185DB3198487608E06E957DD10FE6921522602FD30C42B4C2304B4940528306CA3AFADED046F361F990D5A0B04BB0F246BFAA5C753FE1F18195B7A28B2641BC079ECEBAFC6DED91F6D567B80F99867F5A9B715F97F23793814416A387ABA77E44F4C758C12E2E85CB5A31FC0A801CAF88CC864E61B4A946006E350E39EEAE8466C396EAA6D1718101883D45A25B2F98C3AB145B5866BD8CE862A8CCD53B9FBD3774C2BA5A51E99B1479F4BE066DF3542DAE27DC63FEC2F3AD42C3B3BED707838BD1049A0543062629A36E582391BE5AFCD7C578FCFD5C29B067A632C47AB26C4C70A85C21E62F5EF91992E4164DB4938B722789B404648E2ABDD536051F09679506BB2377BA2C6864B223F6AA1847E588B802C01ABBBB0DEA97F8E864ED776699359F5EE4DB41AC21658E0B5A75770CE38C60E3CC88F21B9F1DC1A49C18D4570FB1ADD004AFC2E1F07EA9E616AD552705B0F8B3151ED4D0F92B602171E264A3FFA72DCC8ED537E3A4523146D095C96743AF80837C84B0FBAB0DB0935F6B3207473AA62AB75EAB5B710001F7EB1F66B20014B44CA353A7155ACB67149E88F33EDBB5D9611F75F0FD3854897B117FF1DBEB87DAC7EBB01E0B60ADE59ADA09BA72B0A33941EE375D086922F9EED2962794D7836A11CE2FF65BE68CD300BE5D9F19B3BF367BAE91EDC364A1D43983DD48B6D6B16264FF26548178AEDC40D2A37F006BC80B5A0CE0BED67F377A15F71B82DF858935D505805155164DA475B950EB1FAE455E3486BBFE72E5912A4A73EF1540F7BFE438CF17EA0B09227C6C06EC08526D302A274141BA83FCCDBEE0376638377E46AFCB1BFE496D18291367C3B9791FC0CCFE518CC64689BEDEE5CE8FBD7DC010A2BD965E5E490793847C91C1991EFF0E6F5DA579D696D66F76062DDC6149D48022E2027508850B5000329E796BB3C947AAC57B4981E0B15A21D8904A9464FF1A2A9494990B609B32E6C407E96E07A048F8B08597B7C4623DDC8797510A8DB68723FA7F8FB110645A2EAD1E6E7746E119A6B3DC43B2E1EAA1612160957AC659DF1D77E3C088538F3A590C801C1D646747DFF70D4CDD8B0C5A3FF3BB8F470823234CF62AA6744EC8957B44940E5DCA77D8F4F3C32FEFC81763D2BC49FBED6F64F833D120AE1A018351EB28AB4AD70DEC2BC070F8C9D2E8E6D1345FDE23A6DF1D05BB76B8EC1DBFE998C0542F68BB595F0DE399AFF1A139B94A083B9D23E1624FCA56ACEB27C99E491153B7C2A7F90629CCF8AD17B892783A0C555B341B691C87EAE80EF3296E28EB6C98D729007DD7496FF27DA9F2CB49EA243897E27ABE9D3638A4B45CA6CADE49F126155AFB0996FD35266991FF43A29A8E6C6BCE22ECB89237258FB0D088A569E9111D133D195AC51977ECF53B310D2788A0697287FFE88CFA0B6FA9A7587C4FB7B561C8BB5F03DFA83E1A18B426C63FB6FEBE93CAC113EB7248F8CA10E8A04597914D4CFD001761C328587AFDC713F6CCE3991D770BBD3BDA2F9A7A5EBA55C2ECCFE2F414D7238E57EFE63BE0D4BF07AF73EAE5E1A16550BB5DAABE3CF7B3F95F7FCCD4AE4142DE0EC841ACD986A5E345D788C79799618613FD1C45F7363E5D826E56DE4912E599E1C359801631321D35B1382B327BB5F32A2487B792E27E290CC5B0CFD4C667A932D2118D020C6C2C6DA864413F273100745FF6D70DD71C19CA258F1C94C31B131BD13E3D926042E911D8BE5167980DF646C9ED0A0530A7F11673E090823959764C6D4141D23C7589EFB2E7175F4BCD264241C5F6EB4865D803A33FA3535B94D5BC7AADAB2C11CF1DAD764E2FDE8715C2A54B4E6BE79CB074307F8E745F4BAAB5CDA947057465ED1B3B57615FE4FF8FBED238ED801C75FB7CAB585534DD986183F01865C7F7E7A4C0EC1D229D82FB6A1102B386F370FD2FEC632126E2EFEDC98EB90E223FAECA7426C784C2B8A28C84C607B4A70CCFF8C785FFE34EB4FC0E2914E3BFE51B2EEB58659DAC422624ED098488A43066FC198D7F7C8F411AE82825A702D45ADE86CCF673256C1CEE9DD9144759A947AF0968B3AF4B39401E41ABC51C6BD29693827C5C8A315735E47832176850963BC24165049FE3DC3426A1444697F344F6657A6E6DA25DABAB0A7652FD93EF5A3C41D9EBF999DB9E7E950272C58CDA7A4E64DBBFCDBFB2615A492FDADF6A62018761E3537FF06A018F55D0CB6A567A05738FEF64E7B7A67CCE408266310C4FCB6C611B4F3BC7092C7A9E2AC66243EE994A51E02990A6F057F64D9BD73DE8A17916CE7BB546582FFF9ACFDA44BFDA860AF17F835C93A1DE3E14601907B0D3D9083B1166CF838896F8463FF26119905901CEBCCCCDFF6E4508F9FCFDEB77B2B34E4664F2280D8FEE6F23D9ED7C6BD34DA17DC1D7D7EE8F05B226D52CB2C76F898703ED50670390DA8ED23F2BA2E749B43961E0ADD0B555C89136BDBE563B95C72F7988FACE222E9925F5A634FFA4BECD02C107A57FB5732C19104C98B6893D9A2BADA0F3B2576CA2B7380F79B711CE3D966AC78F590EB2FC7F4339D0F3E7733D962D488EE17AB8051132C7686276E90A599842765C8ED08BA12431F3726683112CE3A2B0D343FC86B8D5BAE606E76126381F0DB4AF520FDE1DEFE97CD13C33F4BCA14B0CB8A196FE4721CCEC5D36CDA3605D7E9B06377465F5E72C2B71ABBB26473248BB508B0C997DECD27567B000787890279C0D7B82BEBF8906F319D8E1EA7FFA43578B8B01DDC4ED041104B8045403EDD3E31BC0172A2A9AA7C65F524E432D1F4807FF1261B4992B9557FD9166574F1462A1063166E71CC55FD5DEE50230EEEB756D9E304A4586F5977E1D781E03ACB296C483A3A81B58877810960C26AC098857763905D830825F2A3ACCE3FA68E6263C3678623014985B033209AAC4EC753420C0C3B7224DEB282380449231F769B92D9FB0BB2D453FEC5EC3D97137F1741340D9B5EB5D1D1A87260F8BCB1230F3AB7B37124C1AA17F1F810DA21AA96E1F221B031FD38F14A4B874E984CA10EFCB748C2C00DF051322D7157AEA95DB9EA38402C596DCA205DFCC8527BC11FBBF527A03C90165AE3234FF63577FDF56F5E1D63D55B9835C564BFA7CAD199E2315F5D52846973FEFDB401C92BF5E633A4EA88D36B58E6C44C401AD36CF154A055AC3DBC77F554580D89FCBA42DC099CCE7DD3235AF5D872A7CBA293844300FB4F6FF663F53B48A51D248916FE63E6E1AD85946D838CEAC359D1C9281EF51BEA535A413E3D9AA2D70BB45A1643370F4A7C437AE779A5A1FC3365167863B3BABF7B21EDE2C201DC62427A4F089EB03BA385B283D4BF713353E53C0EEC4448914827D3A8D4E9A17E4EE60C966314D8261192F9F8B0D84ED3A432D4DCFCE024BAC1D10DDE2C4F2DF27007275A7957ACD928B790399ACDEED887BB7E35208687BC56349B8E113DD686A3A2F0B227A2A8220206D075D936C8EC1C9E87B6BD93DCDD00466DCFBADB63CB86F756F800B56D6A98444F6FC048A544155C57BDC57B52C1D7E5ECCEDAEBC0CBEB39F149D155C7B425F13EBB029FFB3098E5A6FCDDBA491C8589FB8E78535F0C9DE3EE684782E7DF490E866DC166DBAB6343745D1058ED0306FDB2ADF8A26B4FDD2B14C7C83A9873C3252FDD6B861DB5F4D761F652CC4C9F76E02D37D8DAFBCC5039F2DA00C78D4185E9CC34CBA301CB0B90ACBB540AA7702A9AD8239AB0E700D8C7CF57622913B3FF35CC4F3B537F5D3437B83B9AE3ECBCAC095F17100AC8F066F0D0815D33BC9C98C77451F9BADE61D5D35B8E63A5473D223972F3747C36295D94C023A9987A6A6D4B96CD9C80E7A8F85666F6C42B806449C2B8E057790E203514EDA439783E3ED58976BD90926F786B63AC3CC6BB18E9DABCDFB0149104B63440A685FA2337606EFF48BD95B6B0022583D6BC51807EB5A655F9EBC73086E32ADCD4DB827FA11E77A40051AE9DC44F9EBA43A6842A33C609914E304C9D93DE24CC2ABF640BB349AEBE9114E91FDD0FFCF7F17D849C14E65E59899BCE97B9E41BEDDA84BEAE122F21D5A3A463BC99B6A7153197C62D0F9EDE9A4B58DCD606EDCD4463FE804EBA4413DD4B6DBC59D4110831D3785EA80921D2B3DF84CE27F3E083EAE50858B397EBE7D518D346BA5B3906DEEE8B2E9085746CCC6F68E72DD8AF9307DD1E02601FF268B4C22A17CD556EBFC5B31C535C74420E8F262155EE79EAB9093EC26A46B533FAAF50A19D8FE4BB000A04AB616920BB3A0C8071102D2B309E9E2DF0FA407BE2479E7E287AFC8DBA2311CAA2A7EB1555BE4B7383F0DE2DB5845ABDC79F9599CC291FC4619299D20656EFCE90AA38BEFA0CC644871E334041FF6C94353C70708082777C54DEF2768D52C5CC48F24FFD0EA60C551334B2ADD8DA12080950ADDE1AEDE626EB2610AA2445A7217E7BA7FF447BAC53DB1125190F143A33D63B8B56FE4BFB4D59F3EE8B6B1C9F944005668FA3B2DF087B3E078B45B6F90B685BD0AE5D6E2E2BE44774EF76813E3E1FB9DD940E0B4BAA091D7A4DD2102952F907DEB9A940D498412805258E7636F326574651EA6DB421591537D1F2A08B9746E77DE68DFCFC3C35C87336F794B32328076961EE9707A634B5F5F29E031C360A8EEB94F45C61DF6DE4B6D1DD12E23B23F3F7C4FB3B6659A613EE02F4660A08E7523AEC8CA35B38E1A2DEB587FADF30662E13267FC7135CCE5BCDDD8A402E545B5D2D21E551813C6697CADD663E4319EF485D6CF116A4A613E9031EF49AF75EEED610E5FAE12752CCD73B5121498A60610E27BBE1F10AC2288B024B2CAA1AC3EF92094A90F71E7B6B8F0782C2C53E07181DED5411B3DB856D209D8216D218513350C2C0A3AE815A02E160E25A7677AD11AF2E63B0D245DEF5E7FCEB78DB45FA1643C9AB306A7D7AB3254FB9BDCD39D6E5E4CF3FBF2E5A2A19D35D7D2269D737185CD082A99DE91A6A1B604C22688470B010C7CEDB9A9200DC9573F81DA6B4A858DAD367F61040C9C381E42C2AC5A070B5499BCA95006BAE91DA5626550A6666ABD04789CDE0601D2806F78A6610DB345BD191E711547E316A58F29FAE56FAC56B00871B625B81836FE0240A62E2D57F73B0DDF80A6CA199C1B885E5B189D6EC0FA1D1AFD33CDFDF6C0AD6152DCC94542A8145C4258205F0462CFE43BDD0FE55DFEBC4F52503DC64D7760CC21692ED1D5A8735E6881FA77784DFF7E6C707FF9F71AFC9EF7F356289DD6ED3463B329DFB78F3498B14765437BF68EC6281B1D6BE1B57C246941E78220D3516BE5CC43158063168203E07A59F2A1F5E1C817EE50B0BD71A50EFBD51CD7ABD841CB8BC8BB75775FA1BF571129515A6705BDF6226E30984E2A61D6887763514E4CDA7D3EE541D6F197DD91C65B1D22DD1D1B469ECFE5864BC5CEC8D090268B433BAE2C9E576F5158B6408A845192278865B61484E3767692B7C86B4D9249450FF225C5D53E262CCE9790D0437BFC888D41AA7F79D65C8233A17D7ECEF5A8C450E7F9388BE4F6B09E7EA85996D3AA69938667F18F4AD0CB7AFFB31EC9F9E7975787E82FC20F1A277361BFF0AA67ABC796E436C9C98C6B4C2642829FF12DEDF62CB5BABA3B0B747C2D233A068F3CEAA405F19624AEA09053A5956E7AC3B965892701FAC24A7D20F6BCC6F4ACFDD84EFDF2AD6660C85FB7F29F4F34C6D8B36048F5771B626EBF3D7D83E1499E1FF55C48B5D1B05BBA6CF2F4F16E63A116944E08A6336BCEFE1F4BD0027888B938B9D1E9BDCDB092F39E54F26D938025D96534CA53360FDFB10368703E633F671E166DB308C638734A9DDDD7C13B0A19643BA26EBCC6D28BFCDB7786404C888F374221E0343C20947132A3348495C5EC9B302113EE4DCD4F4DA951833BCB60A08519791E3EA07F34B4C46027D42D200FAD63CB5ED3CB27C37C802127BFE5BA9F9FC4997F8C9F3DD9677F53CA67DCD4568C7EC8BD86665F56B0EB90CC54750AA1179239174429863151EAAE8340D31118E101D2EE796A6C38878DBE938FA0DFC1B476AEAD35E1CD60ED5576B399F2A27EE921712D72E86C342F8AB9F4F700A488B241D0114A684DC1FA3C202B060D948E763CD26AA3F34861206EC0F0A785F0BCA21470D6BB7468C256808E8DD5A2CA27F05CF4919BCD101D9DD09E90EBF990A8C4611617F2BB089677BEA0D200327B8C047BE93F3F33CE1849FA610E68001E28A86E26899F2B304BA9088A1496923F2B4231FA40CBE728420F68C19677DA915490EB90981FBC64730C2A49395E324A17BD61657EED8DA7B73066A7CEF811AB2372E4DDAE95D3BDA816D188396DBED52DD87D7E8481CE81CECD9DEB7814C4BDF67601CEAED0D7EBB1593BF2FA44C70D59F3EB95ACDDF1D4DC98117DAF7745A2303AA04FD3E16CA4BC1B9F84057CBEE1C801FA1024351BC6D272A9E8DCA0CE72FFFABB02C5D29B24B4A298E0D7D88B8018920952CA79AE4FCA6D73D6B1ECCFC72FD308ACCB2DF5743B2CBC66E8772E7D3A2CAB8E4023B672986E9CD89C2E6904003222FFF0187057DF6FC6CB66B00EBDF5FA6F91FE2312E1173979EA75F239E9207F58F1E3A2BD41B7B3E9798590E4169CBA0A9BD0E231CBC6303DC73034CDE4005E6FC607F48ADDC72B6887B13A29ED5958F8E6A5DFE6AA245505B1C4F0435041B65A8E042180F9AF26BA2C2DA7EB8885C043C4E9B8A7FFA5ED07C92705C06490EE9C6C60F360C325C295CF7CDE548F11CB810240BFE2E9FE4C0DE9CC29EF3F5B840C68F73380886172E2D388F24F27E88456F88AB9FCF4056366A2AAB7C0752557F97C911E440AEEE7BCB4CE7D2A32022647CDD18D6F068C3375FDD3B5DF4956850E03CC380DD8AEECDABE30E2CC9CCC3C4B2D84CFF70ECBBE376EA9AD6AE60C4609CEFF2E520ECC325BF3F25DCE66822406B810D32DE8322C956E26254F8A12C29C2CD7E5416D7F76B2F6B7672340B033BF32C2F2E4880BF832AA907D224A5E1E1B74018C19AB30256B761C4133D34FFE1667E08053E86E7A175CBA08A2B69BDF71465B80C2051B68AA5BF96518462AD42FFB9CC9E78A2EEADE40E129FB16381F2EC6C0E38CFA30FE94DE81670D4D5BD48742EBB0159DDABC85FA4FFBF02419FFC01F4A8A33A1D6CC0CE4EFBE2F779FC227C48326E26A4148D2DD8553D63EC7228DDDF6FFD32AE8AE4DE09D2DC7A7D43977931AE96705358C42A2CFEB6664434780BF888E49B6C5A22FFB1C97AF6A6BBC9BBCA8453AFE553812C46F72D8FB5A8013F46A2A66CCD43966C445770D1140EFFDB9780AE687A056F8357FA0B5F4F6D64755A5536E68A33127777A75FDF1FF909A86654669985312980A8197EA5C1684D8E100A1D3C6E2866FB2ACEF17E69E1E095027572E6E527A1A6B0E3F1CA52FE7BFF6A7DBC2DB591F2F746546F3F0E913E676FAC564330CD6C8A6C30B16C0B383D9CAAF3C1DF16256D8B9DC894367EA396BBE677E1A5DC7CABEF27563B3FD20BED1443A684CAE1A5016F30B998BE1C069C4BC8DCA1C7E65BC68BADFF7A91DD7DB1C0A2411FF785383E8B9FB8693F034C55D3C114A10CA0F16118725F610CB1DE8641E046FF9DA44DB1F7FAF5ABBCFE810A0263F1EB5D9F6986AB1F42CF057269577A83E3F6A9A4F9A59A7DAAA5679943DBA366E7CFC307A24645071B960137E5172100FDF3015F9B7A088B41BBA4514C94AC8BC86BD13B27F1B49400DD90F3DC9A3E8F4A29E8EE78A1CBC2B901719049AFE8B6413A0E8AB28EE22156E206454A46BA392E0B3023CC084B3F2C8613D3AF9169716CB5FF3DC2C9E582E7DA6453EA163BAD2C3D10E49F6768ED4721938069F7C23AB0AFD057859FA2B405B750F8F1F618A585C6B805FDFB737C1E41639B3850F579301C45633B000992156B9AD894E37A103098F584F05BB08A31E890B1F5073EB982670244310D0BC6729FF72C81205EBE9093FA3D5278C9C1686835EA1198297627C2E1DAD0848BB87A816A33E7089FEF35494D74D9744A7C59D204D7B73971B0E3D3E6E0C4A747FE9729ECAE5B733C66EF105526E1B5CF1BEE4019A8B76CC1F63479A5F0D9071129800B20AAA315B97328C1CA82F5A7A359B9A4B4CAD1555BB25141570B10C819F6C7063B274F59E3BDEB415B7355245718310A33D35627DA0683D738DF99988E08E058BB94AC15E030476D0847A498B447C67AB7ADE88C3BC3CD908EFE09B4D4BDDB23E5276408B41BE493B08C77184027ABC240A6C9A1CF74AEF3F1DCA3A7256F0D5D40B377FDCC10489CD1253AA7E05C652D2C95180B5FF1AF1EA3A528A2F1826FD816C65CF0DD78A0A48C996E1C55AE3451CBE34CEFC40437EA2050005CEDC18B7A14531C4247FAB946CF9B814AD633A7C7DAFAACAA1FC7A4AB5F6A4A27B32A215EF068A5D4D69D408C3AB971B70D4C995BF853955759AE0911F3CAEEE58EA97647F628249917B4FA484B627285C697B420D01222E71CDD3AC3BB47DDD0872D822AE71B73874F217B14464C1C8A3903729BB8539E2651BC711592E66C1A1CB7354AD54DD0072B1DEE5F1DE9E2F3F4277CA12AE2CA152F6168ECB668DD2E9A10FCCF79F48A5E22672AFA8222735A5330BCA3C14609D5D38829DC336E47395D82871E919A8EB04BE852640B336A26A7C901F88BBD7145448BADB737406ECB54E5B7BA94C1729B3F53C1C73AD9028CECC5E20388417F106EF4601A6E286A7CA55726E623BD8AE91CD69D5F2ED2D2EA75DA9DE22D6B427DAFB905821D3D29E4C591D14F9C0A429E9B2FCA48A987538042A55BE59DDC3400A6BF238EEA0C60F13BD1E8363219B618AE7164200BAA47623EB734E074385870C5BED059C357F4A64FA2E33B8BA32F76AC4DE8EB3C2ED65C7C44FEC8EB57B264EC07D8B386294B34B0AEB1D376C35BE6B9BD3C3662B104C4362B7CA159D35FE90878AAEFF75BB2CBA3F967ED4120CD212B5D5ABA46441EA5E7565DCFAEDD1524B19460DC01950E5F87BB70655ADA77C02DC518FCD3A0921B539CEF4E20CB3C290F3BDAE76B5BFCD6A0A0B7C314AAEC2728A26C2B978C57D152135444E1FEA79CFAA59825BB480803A9A8A0CFC87271A38995A9280BBA7E0ABD487661466046CFFB2E89507FAF32AB87DAD52C26D11A5FE5E4492C93237D9523D744FA6F7FA9129BF7892E3B63C7CA6CE0C4DF36811FEFB8618C8A08B1D146BF478B4C49BB2B50052F21C6A997C5CA077910493950553616DF0B023B655CF83698390709C5742EF001190BF36167BD95E12A86869EB49C4117D061BAFC2E51060CACE5980D8F5EEF2ADF2BC432541B315E1C60F07A7EB2C5DFBBDCDB25372F9ED8AB6684195D025B9C925BE86F6489728AEA4F73F39C7F66906A7A4A3BD47B6D211F967405A3F2A9BD343C1B186E1C9D79EE562252885A527D463C69BBCE04688D1CBBA3BACA450C8DC2C29B02BEFDF5FD8D2633E0FAB316311AFECB9442BDAD5DED564BE64C2BD51EEAC43BE1835045444CA8F4494629385CCBBE265A32DCE6525FB0D35956B3EFACBBE19FC6D9448BDCC81775EEE190871B0F65B84718EC38E711E4E0443E68F82936EAF6133C41DFBFA8472A5BD18D3FE53DB1F6E16EA000615720E08D7FC9F83CD2AFD49AF0670E41B3DF57CB49ABF9D45939EC789920F2D95E9361BEFA7432F1E2A672715EE20F7BF9296B5CDDA32A490B1D30C23FD805C7FE7ED05283297DB878B291B2ED2CEDCEDD0B75D2AC91CD2E1BAEC46571539E23ED1A1D4A236F594057DBE77889CCE9A620582DAB473A4B2B1D10386F2710FBFD38B3C1DE9AF308E4F020607B1834B07C4580237D0C9499CAB75FBCF3A95FEEADEAEE953A48E873275794E4B51BE740FAA4042303CB4DE70DE18CDF2A15E158DAEC64A007439C9DBCADFD2C9D4D7A12CAD3EAE6BD4762BE9C6AFD936EBB62B0F4B2DF153A086B374596A297B6F18AD8C435AF085C4B80FCFD2D7B79A03E42FC816794311BA7114DE4B5377ED74068A786C41270E4CE5EDDEBCCC17CBB98ECD457A21EF4FAD40AFE6F9832C567F3D5DD217C7CB99941C63081B95B15C2BABF4957068DBB6704275975ADB771AA4C7EC42AED27610429DD94D585A9B78DCF87FE69D1820FCD438607B2BA90E0757539A368C6EF9D4EC50B68BE943D8F09C8B80A7D42F04A299F3EDAA88FF1086EDE9C4BECE54E91678E08DFEF168DD192DC7CB2609023C9ACD4105251461534DF34C8376CD68764989531E88B9EEB2E0CC308C727136420036C40FF710F5D997C650FBBC3A4F0B4D77E14F36B91DDD93A653A154B01C39B98B77B4604BD67102D22FE5AC19E85DEE800A478EBA4F0133780B48798AFE563EEAE19DEFCD5015B18D15B9B45530642318F09BE1C2CE622417E8A4E189AAE69759A766AADDE7041B1EF51A2819602C2A5B0267AF8F0A460139E30D10F88949F54380480F30013C5D4717622C0CAADD1847EC339A64AB80D62634854DD19A079721287A4F7955DCC6975B58BD3524427D1CF099FF523C9C6FC8D83B67FE286610261DDC0B61F7C625E819D91FD2A3E3A9877DB655B514BBAF0BD6EE95F6972CF36427502719EEFE75D88FCD2B199F00324B8606268F0654ED8BD72D80F2A152BBFBF65A7547BB8CE23AAAE2D8A0FE7204DF5679D50D431E0A20A183D23CF69DF1EBC38FA9C5499E6CE7C6DEFE41B91F8C6203AB483AF89E9FF7D972D78787AD35B21DC292DFE4031C2DD4BB1E71F7A4EE64E6081AC57E725DFD2EA13767F7ADF202DFC398751F3CAD1CD291AA1B85CE83614B985E0D7B18FAF595D4A915725279F1E5A721B8197FECAFED6D0FDFAB5835B67F4D7E82063EC0D4FD4F52EBC75163D696382FA689C461ADFA8C2F0B0E27B106C7F41251C0388457B72E1BBE5BB9AE79E5B3DB6DCA123054188CC7075DA296A294E907E405E23EA896070CA453836B54454686B275047B066AD5995953276305DBA8CDCB5743CE68F3AFA125ACF590C72BD90B5CC6AA121182595AE391B23CAA43C3144C798C53E768D24E823138D6A50A6A344729979AB654E8FA4F284D174B5428FE8A90AB085A46BF3EA8069EFFAC731D8A1E459A5C44A0F41CEDB29F2BECB34D1968809B7766A82EDCAA35EE818FC1BF7ECB01541AFCB93654BCFEBFB868A35277E05798248EB19C1CD340EF46414784A25618C5BD42D514CE3BF6AAFCB10698848F41BC37F1BDCFE96EA516C3BC4C51209A281A3A5E62F47F1C57D29C93ED7FA5696AB265712D960FE79611768390792DA6AE1D1DB7E3820C5462E2285BFDA9A770153B1A323C48CD15B12293BF3A8690CFC1CF4830EF2A38234044868F8A9F5CBFC83DFFF9965C29809CF67C3537885F1FB3E781AE025DD0D7ACF1D7255DC08636C307BDAF56C09293CA567AE320FF80FDFD66F7673A0CAD85EFCCB4A8D1FD397AFD0DCE7F3F0C8923221FF1AB3AC24B4392D6151E8557D5FDFF8398B837BD493628CB48CA05B80034C3A6093A2D8B2AE4ABA80A4E84EA7934911BADF0C84E3DF4312A27C7C46AF0687EAAD538DD3708E2FBDD4ED41A965683903C18F8AF9094786E919212B1F7597CCB1D1741B7E5796A10398A379F17C5F079DF83BD83E84063CC2A0625066CCCEB479C746E759AC06C356EBCCEA370F685E9BA3B1A7611C0E5FA26D9E2FC7BC90507D38F4E4E9042818A5C08CBC319CE3A04DE09A5B97DF88E6A866DBF3AF71F131BFEEB48E27024F7C8C45924373159276032788D3EE6DA5F3A0A25C2F862763BADD326E980D22D4AD86E3D2BA1DB7E90615F3D11A7E2647881CFC1DDEA0DF4ED4DF2418C55506D6C6DBD066364B9C57DB9ECAF40E5045C42FB96F863A5BECAC53AF05F4D5879789AF386854C04B0AB0AA45121D3ED64F683EC8874F0CB0B2D8462BDCB2DB136E5061AA75FD276CC6FCABB900D94D06B83EF714ACF53853AF05938E3197152EAF8FF0EDFE885803FE9D8BD2EF2D93C2A2DFE732B1A7823D9F8794CBEE50E2E4947F5187369917E0B2A2B81DA5D7D4ABC424E947D09E3CD26C3AF743CA0C5BCA57E63EDE87E0E5255FE9F8D282C0D244038B8FD6515B955EB84D2212332DB93D3C266EF0A0F209E8CDAD6C1793A6D011474D77F4027304C98C953FAC3314BCE448A570E259B2BE97F954351691FDF65FBFACECE4EC900E91B124A434A4DBB65912FE2726570E67F08E0435B254ADFEA99B0ED4D24795875D5243AC26199C0D4DA230EA6F8269A4F5123202166ED4FDE2D2A35E7F121531A90679C3E5908DA0C86F242619C5E9E86897EF8C11B87903D8CDF8CA40DC08EC7461A9BA9B7122F83610425A2305287DEAD1D546F8EFA0C52AC982AAB36B76370D511B8E1ED362A953D98A7482234AC1D75145219D65BC796CB3F7DA7B26732199C9EB0F7D7A91AC654D92C596C425FCAE119FB5059D3E402FB2D5E8897926F9A2199A2CE227876845F955C217D30472C68DAEED222E1E273BF7E4034790436CE0BCAFE88DE6434482EA644C72CABCC0DEB973113A2990CFA96E10531D26337609AFAA3428127868AB4D11EA5F246674E2C7D0BAF5DED03FA0E3DEA542E928A7BADC658F7FE12ABDB7E02054CF95C180B93AEB1458EBAB5EB0C3FEF37666CA8250A0B16203646880A335CE60C6C2BAB2A0D002F2AB54F5D9B407DCEDC73CA5674BF448A18D5318EFB13827DAEBFC9049BC0D855F77CFD06E37346049C072C9D7C04BB67CFED442AAD95803FAE7DC1036726BC870016550D46F1F1792CF6A2984E1A984CA43707546F67E95A9DB232AA3A3A51CC2E4F1D4A53A9494BB5CFA082761C1B0048922ABAEC6B3459A729BB1E308635D17B6871CDC9729D822FBDAD0FB42F4F35E1E68E95E2F58D16D2B9D71F8891038F79C65C1A5DD24318A2F28DC2DA01BA5DD670881BBC2D25D119F62BBD24FD5BE3562C69839B10C3950015AFCC473708977F75993DB2A083D1696A6E202D8AEF569376A520A94BEA16AF62A3BE6406067A6A32AC2EE0E2E64B83B5579C441F681C1BA5499131275BF6E668FC3C28136FD243D71D6DE365C9CE1DB574DFFE2774127F42A1B2033A6FDFBE26C9B2F3956E0A35EBAC68D487C62CA9EFBFB2C879DA4B7C77766DD410A43F73FF39111B4CA4015B69EFE4DD65AB37B3F2DBA1BF0647FD2A172FEAEBF0E9B188FA02D5DDAA9A56C248A6CBF2352DC63D2DFCA72F52615019FDFF4AAE61025A8EF5E2887A083F126B850371E397B497E69AA8F85EB5B1437F498152B5AA5FDDB38C865322176A35619435783EEFBFF708CD90D79F1F7023212CC9DDD366BD8FF934F4B116E8AC52AE6606042271C2B6EDFAE7BB2DE7FD58797B2B4BD5A4DBD96DF32EBC64EE2ED9AB671ECED5EB8D506FFA38D24FD9FA1BB41F969FBDB27434221C7220A4598BECDCA3A4763571236DA9322888401A04117CAB7DE44D97DD1F45935374BDDB91AE4185C7F9D715106B18CA56691D8D4F13C9F05FFF4E4B343D1067928A05807883D48C5AD22F724538A16D61F932D9B38AC871A603A307CB78EB0AA35611A62A3714C472E97E23C4B824472FC1064748F2B93E33520C0642C3402A74560D8ED3F230932A5820252B5FF6C4149D92CA45572545EF508E302ECC42083191B913D20A065BF8D825BD3CDC072EE5132646C549B4BA2240ABF30370EE71B63C4A99B3B7F0711651222BB7C562BF5257B15B260FFD818201A31BEE398891C0931DB4792FAECD4894BF6C209850009D129EAB46D536FA1FECD44A4D588CA3766DA21D82CDC112A0C7DDA8F00A4AE7FAEA65ACAE641719A3340802DDB9F9677C7436D3EEE132BA8469F19E7675718AA57812E002A1C35B0EA1DAB2C6E31F932B990800E93EAB66F4F4DA31E5429DBD639679ECEB25B298A0686510E5A6875147945528CC8167ED036CDDBBD76A6A06D867661641C139D057E44BB26D299A6B64C58DC848F91C41AA2EF1E6E8D716BC030306F210BD15588CBBF0B72A899AEB0E2DE895B0957974681D1679D5F8F8BB90791AAE7EDF350393466B12F16A0E00D7B9401D4B4FA18520EE76A67CA54E394D4A393665528699E7E3B4F16E81C25210F645F993C4066D35CFC994D008B5D0D240E2ECEDE7048508613C7B760C07EB23599BAD1E7AAD681665C2E780AA2DFD8C12C87B16D835FD03342133C7EE0B61BD8100A79B86AA253ADD43DC0255EA4A8F3BBFC5B1672F6DFC4E54C1E57F1EEE821D3963C96A431CFFDB81E8F5752730BD12C57C31100F51F3DE7ACFD379A045D5ED55407434F1F4907FF1DFEBCF6E3FA4997104E959DB6A7F982034F2F4C634E87F5C47A24727E41CDBE61613B5C3467EBFC734ACEE5325080F3F621AC1CD466FFAC525452C139DD85A15322431BA8B3E983A77748A45A50DE0347ACA872EB4DBD58F4E7FD0E3EDC5F0C27D6960027E49AD065360EF2174C32D5ADF49F856C61836676C216631F7A7098519084F4676660B82A01A55655EB3BAEA06DFABD941B1F1C966612A6C1975A5F9FCF80573EC4A704D1A26485EA6D11CA627A324F0DB917C53EBAA614E32622B7584E96F4A67364A73F2A4DB3D8C260E53FDA7BA988A0E789DF7773CE8B600104A18EF7CCD0B4F3C0047AECB6143A05E23AAD728A032EAB6AFC40D47DAF76CD22EFFD2FE69481C02EB4E408E5F991E62B9FFD05D58EE16B456A025740090904AE0DB628E947BF11F80B20527CC6C9602A42A958CE48C4981E949A46709E9C7E1F1F4DD0D491FB91DCA9CB5018B7B122A60465E68D8A1D9571386360DA2F2C4E21D05AA89DFDADE9BBD2C7BD2D46B24D513FD1AEDB292C7589137AA766F8AC723C9364C1D02C1FF7398D5050370581C47C6E1915125C5750A341D78792E24D32ABE3511E50150351F2FE523F6DAE860D42E28E36B2A06842F6682EE468E2F39D2CECD250D859F52C829FF6E509A4CF49497273EDB26AE2EF9CDC422873D00CF0824A087FB153F5833C6BAA6E5AA7F5E134EC681141705AD2F4AA51A3D5E782D2C3DCF65B86201B77FCF9BCECA477F45545834D6C7501DD9B2FE1424F3A17DC68CA12A9511A66B662A3B05697B20FDF4DC2E1C8CD9956798F5E6B0F8BEE0A5354501F5C1FD3F0D97DBFDAD808E0B4319194FED6DDE252FFD8192030FCDACF131D8281759D4F127DA72AE1E9CD316C45B7DCB8F999A293DA6D9FDE3FDCBABBEDB22EF6569E79F9A9722603C75C55218AD3D44D8D184789DA96E3357AB61ACED87728411A89983A51999DECC5EA1BBBF40E8774B6367C6F6109A7F8079404C491D4FC0219D1E3854794D08E1BDAA5D323CCB435BC079D4FAAF4DEF5148471B6DBC3C20F463D06767EA1C7664624B91E394F72BD728DA4683B671EC46C10FBB96A27D9D41C36993BE2FAF7BA005EC373A81E4E7B2E20A8FF0BBE3FD62B56BB77BA0D473945C29E648BFEA8561041930231BF042D2D08B8C9F423B0C62EC99CA56087900846B1B99963390E6979F36D28F0618C23AFC51E3D10BFBA4F6BCA2B199710BB7B5D8613B3782B665A4990E7C1FE9EA438053B8EAE880E711596C1B90A37574ADD314AEB890B3B52343764231F58EFD6F67095B7A794F25A23B24E5A0ECBBA1BE759EA7C70B4243CFA6AE5D9FD178E12E728801AF9FCCF652482789BAC21F9E8CA0FC7D84DCACE14ABF49AAF3424D03A34694840BAA4CDA08F539997079FA533669FFF231B088A83F6503D229320D167B32A8BAA6A81346FE8CB967795FA3E30D05234B54A56F353B0C924DD61861F2C61B4DF75EDA5A7DCA09E9F186F50BA660AFC531D9801F99528CA184989919BE5D76EB80AC61197339A93231BE73504890227D0884C9D76BCD661CE31677C0F3ECB150AAE3BE05F1C8F2FBE062AC7F2D36871FD0D2A0AD99BD633180D7279FDDEA1852CC39146D19F6A9A9CD17302C2C5CEAD7F42DB8F0B63F42D1F48E03FE43F2DE2B855EC8F17755A18A2F443D0D0E3EEDD521DF6C4A6CC99FE10774D1266DE2E36CADBEF0B6684A3CD0D862BDC4A07B3A6142FDCB389522F6694E6951B15BD7E98914746E5BA496FB31355EA12AB380E4E2D4BEC7AF0E4CBA8B6DBCD4B8FD305ECAE1098BC8AED2E9F4A849B802ECD737122A2E1F450D1929E6539B77F7D92DA7A9CDF706008E7E1311E4C5DE6800D59C3D0222F7EEA77991AEC8A63E4B9701FCD9409AE2F0A2CEAA63790EA7A57FF65BCAA582050DE12B436E5B766E1C7B24866C9F43F9CD820BE2991C60C1A97EFC2CDE4A8452A1DB59D960CC2A15DAD2795F28727F3D30BFA88E15E461E101BB03B048D29EE3A8B6E306852362A291BC52FBF7F2E0AE199DADB25CD6BD66411A2A7D56D5F21569FA42080C2B76B1B471FA10A2D2338292D59F9683CABB16C11CAC9DF48E2123B6F845A595862B3B1151B30B128F8AA7BBF232CF806E68414705F7C4633ECF4136B03F881800E46ADE557F034E77688437D3D36C7A0F7EF98E3899DFAD658C30FC83773ECF8AA8EB48E877A22A7C754C3C9E131EAA3D4B6AE5E8DA97DFACD5DA1213AC59B838633FEFBA82B1EFF9A9F99B0AE74AA119BEC8D4BEE1C8FCE6E7625E8EA932762D9C2BCD5DBF88AE0D670EE04F7DB2DA61086DB3ED9C13E812EB549B3E099709668781CE53DA3462D6D18B17A2521AEA865F91CE6A72D84260E1C5AA7618BD21C635642C7CC94A8C2B16C5528A8369D6584EC0396333971026E832262A990A7DDFBB53E7C2CD2CDAE60CC62E73EA841B165299A727AAF61F2C6A1CCA8F735BC1482FB1F7009F3FC240386D46C0EFE5F8DE50ABF2E8DC2F141833F0491B9C8228467895AB22A660936135862D65395B1BCC8CC2D3FBF6664C411F7C0556147D05E9FA8FC14D5BD885C050DCE1D620D2F6D09E1DB16BC8BD79E6744610BA0F2A8D7731AAE86F3BB72880AA3916F60C49B1E953A3A154BC20B0F7F4B8843A45B55A621A7FCC9C6D6E48A06E22652CDCBEFA188A650FF9051F7EA86BD65F1658C57254993A1420F7BDCC593C5DA459F7788D195AC507FAA49F74EE1787E4C166F41436D0DAB952F84A4CF94EB665CFFE0C5D3DE3C08F51EC99CF4DF8F7944E8A9D4F99EBAAF511945E5A97619C78D621BB4CC7CF094780CD84CD5C84629DF29DEDC4E9ADC18AF2EE271DD36F2121B17AEE78537D68B1DBE2FBE1BC85E0A8C62BE2979EF798C9CDC86607E111536062AFB6E4B917A8D03F1AF099E76971AC1EAB654240BC9A8F73AD58F7EE2AE52BA9F27D3AA6889DBA1BC4AB5D915BA5ED9D3B73EBDDAE7903115E392C055FEF6437A8AAAD255F25A9907357D7C88ACFD2292A5ECF64D0C50D3D85E1DF1B409BF0F2146E04FDF11B518AD3D5E98B2E44BE809F086F58C1AB6DB4DB87A0BB365056FF9546876A6256BF4A5F3367C7F803748B5B4D345A5026E665893EDECAB662505A9651F904090E3CA3011A7A8B13F8E5A50A0BFA6FB95B2C67E9935545F499FA9B167BB56DEAB231F1A6685D5895C893B2F5C669394529C50128F93E4956AFD58A3586AAE243529E3F54B241DBB52F629C94570E3D3C4FC962C3EBA3DB915870D839B4090CA71B93E7FE2D17355F8D805980658406E586DD7F7857D70E486F585AEB1A299F71160A63DEF454B4FFFB2FF61B4D1410F03610669907117BDCDDB3ECAAEAD17CAD17E63190B5F72D9B7C9D3660DE54F8474479E88B4252830AB9D7C255918B2D1828E4CDC5FCDAA82788C3B22C4EC15ABC969C95B190BD5C0490E998295E44D7F68AEC0994F23EFBB3E20E8D8A61770A374B21D8821E3E5FB625116DAD97D8AD4BC10D38952CF7CEA347AA12E7795BB4776D6688FFE32C2BEC503B5CF7BDC9A99CC72D748E7876F30C2BFB5477DD8CFE8F1CEF634FA21393E68845120739E13CF85EAE58FEE4889B20D967729A4F4A5315413C37CD999913B04D68662398EDB4BE15B2A8F5B7333250811F2DBA4F009DEA4A9C3B9CA18B44828C048E550FC0C954E03B3DD5235EEA48AC40AC38D8E7B2F5FF40EC4990B930F3A62C9052FD07C5F2675BF35C276B914C2E66606C4AECACE5C0C202DD9631E966128BF7B688D59715894FE4FB44332D2CE6CDF2EF64D72D5C3FD191678E9437B1280F401F8C68CBFDDC5F3DE2232C5CCE7C0FF9E4CB0B091A9DCE8AC17D83C7AFA84C98C4C91C95190AA50C5D823F07B98A6E9EAC336BC2061B2E9FDC9D4A16CC46EFF8F8AE15DF1150B7023C6FF0DBCB86CC7A6E6E7D7148913311FEDE1C107B84FF92B8CA3005ABBE19B5F9B65A7C3CE42550FA20B555B80A55DB908FC4F9CA180F915DB20B3D918E14A74147FD2AF3DDC5AA22FD8014A68B1B31BE02D7FD79133742EC0D1DCF06E302B81594C6138FD814EDF3E8F9C32AD373F128D0A739E312B073E7B48A3D4A8A1242F0E30306BF60E072DD54593C329FEE141CEB0C945B536B5DE04F6385D705E00C191894A928D2E081FDB06CCD045334108AE5FC4B4A2DA6128D3266A805E47643C9CE382BE528386BBBCA9D9E2251E3B6D7ADAD1A842C5B7B746428D9B2980363F5F096CB4BF37651204EA20D4689334ED4425B237E1F0D47B6B4AACF07FBA4873E34862A74E9E82D9FDC06510404A75F97BC8DB486D615238F50D9B8039A0AE52F22C5DC1FE76378592EF5D6591913D3942EAA4445D59E23EE60797AD1E9E54BFFBAC4DDDFAED686F190F7B649BECA1B2F4FB36EA384CB86EEBDCF75702031DDD5A911AFE334A8080F50B5A238332EE99D7FBF20E3B2BE5D56423C812F1EE7A5726110DAB55DD68C063A4157224D224D26307DFC6CC3735D85F726083069E1E3565C2168BCD99766C0BF0D75E8AB20431504B1E978F6D239E197D23C920BAA7249918855550253B96844F04170C52F68200BA39EB97A54DA6FE7760A21B00C2A699CFC37F6E505792173B6E66CD32D33ECECA7E91B5AF82E607E1D3722E6309BAE9FFE64D8506D99B481A1994A9783D8B082B3BE25D7ADEF7FE0B952EAF9B6A3CDEEAE0915E484F031BC4E915523D4898B05555BE5E821B26F51EB98581889AFC697F06153F3E79C28AE94FB19233DAA42FE0FE565B66E878DE96EDE13C7A2099C9C048F28F987FC7DD1BA57834EF919212A82A62E8117B3E9BB0D7C394A769DE509C6EA63F398407F92E999B9556F57CC3759D73440EA1FEEBC62A0707623904517A0AA2A7E34689A66E5BA2E56824305A6E05A6303F9031D84ADD4577C4D49B2E0ACEFD252A51F2A04D7663105540375618175E301E6DB212F0523450B3FD35DF3E8BBCF8F7194C788644792FD0254B745D1B0485E9C6E8E7E7901A2AA01E655A5BF87693AC2BE6F11345D828225D9FBE883C2749F1686A1E362AB3534C353CA818811CA12A1DC9E61D4EE4841A6F87F3B8DFCD5B24ED1089DD84CC980811CA9D5F5593851D41DDFAE9C646AF7B38A97AF52A1E5EB87ED5606EBE11F27555872BBB2C523C0694982F9E65C35DB0931FEE01939E03B58DA83A3EFF902D659A30DD3A5DD663190207063736C8FCB099F73554D12B4212EEDF558E814DDF019695AA77709A25C44D6EDC93DD4ECEF7D1CBB046281B61BAF27B42622A1934BD73EA905EB3E8917A7D9AF218F27C03AC35D073964A7EF0E408D2C1FB962287260553D636ACA7AF08FA2E03A1B5AF015B8E8EC27634D2C34D60CC68C4DE7940FD8078E77B9CF57EF6EA8C7FE29557D5298578CE0BE19D82BD94C00A4A40114386842A7437E7583A710096161A629DCD7ABD2BF9F479A51E8771F5A1C2E60EE52203AB3A8D875AAC9BC5F6FBDAAAD8EB78923B66705236C16F114C5A5795673AF18A8110E2E35B823EC97A988DB8F78CBBD49693A37D245255F7468187E2A0E116FAD4F59F72268446DF93FB8BA7353DFA62A1813E71058DFC72DB34996868147569B0124A2B25F2AA865981A4E2290878118AA5CBDC730917B24FE230D4F1C091721B2811763D7AB8BC5D100D89AF3744E0D06A63106DB838BEFB8F66B3F58EE0F4067447B4D5CAEACF2D7A436E73E8DCB42A26D2452C03706091141A9676BCCFEF2CD820B846D3DF6F5696B3EA7CCAA2A62A15260541C3329182039A2D3EAB45C573C9B3CD244BC536AFC3B9682062E4E7A1D567156A72B85ABD1D76D82571F40D2190D84C16BD73AE9146FEAA677E2A4265060240D196FE857BE140C7B664472DF7F2BAEF32660135DF3D52A62D127B4BB0ABC875624A65313B50C4AAC6B4E9B1A0E995EEF0E27B25354AA88037D40B85789758EB2983F6D0ECE20DA3AA2F75B4E36FC43D3F032038A9AFD22F55CE80907F566E4A9A2822C0E751F99543E420F2C0FCC9F6BD3D6510CAB5722866B752C3135CF8FA35E6C3A16B1B2597E8A2F200565E14713B578498E4A65831'))
+
+
+
+--[[--
+To use the DataModel address, go to MemoryView > Tools > Dissect Data/Structure and paste in the address and then click Structures and Define new structure.
+Amazing thanks to mogus#2891 (857370745088901161) for lots of help with reversing, getting me back into exploiting, and making this possible.
+
+--]]--
+
+
+
+
