@@ -10,17 +10,17 @@ import requests
 
 #These will need to be updated to work
 DownloadCompiler = True#Download Epix's Compiler. Set to false if you don't wanna download exe files. You can't use rloadstring without it.
-TaskSchedulerAddress = 'Windows10Universal.exe+33A6558'
-TextBoxCharacterLimit = 'Windows10Universal.exe+2D92098'
-LuaVMLoadFunctionAddress = 'Windows10Universal.exe+567570'#Thanks to YT (UserId: 1073140472639406080) for spoon feeding me the addresses and teaching how to find them LOL
-GetStateFunctionAddress = 'Windows10Universal.exe+465A80'
-Task_Defer_FunctionAddress = 'Windows10Universal.exe+4A4CD0'
-Lua_Top = 0xC
+TaskSchedulerAddress = 'Windows10Universal.exe+33A75D4'
+TextBoxCharacterLimit = 'Windows10Universal.exe+2D93098'
+LuaVMLoadFunctionAddress = 'Windows10Universal.exe+5687F0'#Thanks to YT (UserId: 1073140472639406080) for spoon feeding me the addresses and teaching how to find them LOL
+GetStateFunctionAddress = 'Windows10Universal.exe+466C20'
+Task_Defer_FunctionAddress = 'Windows10Universal.exe+4A5EC0'
+Lua_Top = 0x18
 Name_Offset = 0x2C
 Character_Offset = 0x84
 RobloxExtraSpace_Offset = 0x48
 Identity_Offset = 0x18
-UserId_Offset = 0x120
+UserId_Offset = 0x118
 
 
 
