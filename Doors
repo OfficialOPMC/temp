@@ -1,0 +1,5 @@
+local mods = {"LightsMore", "GoldSpawnMore", "EntitiesLess", "TimothyLess", "ItemSpawnMore"}
+for _ = 1, 200 do
+    table.insert(mods, "GoldSpawnLess")
+end
+game.ReplicatedStorage.EntityInfo.CreateElevator:FireServer({Mods = mods, MaxPlayers = 12})
