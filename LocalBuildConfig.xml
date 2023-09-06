@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<MQBuildConfg>
+  <item name="monkeyquest.unity.url.membership" value="http://mqreawaken.games/Membership" />
+  <item name="monkeyquest.unity.cache.domain" value="http://mqreawaken.games/Cache" />
+  <item name="monkeyquest.unity.cache.license" value="UNKNOWN" />
+  <item name="monkeyquest.unity.cache.size" value="0" />
+  <item name="monkeyquest.unity.cache.expiration" value="0" />
+  <item name="game.cacheversion" value="1" />
+  <item name="monkeyquest.unity.url.crisp.host" value="http://mqreawaken.games/Chat/" />
+  <item name="asset.log" value="true" />
+  <item name="asset.disableversioning" value="true" />
+  <item name="asset.jboss" value="http://mqreawaken.games/Apps/" />
+  <item name="asset.bundle" value="http://mqreawaken.games/Client/Bundles" />
+  <item name="asset.audio" value="http://mqreawaken.games/Client/Audio" />
+  <item name="logout.url" value="http://mqreawaken.games/Logout" />
+  <item name="contactus.url" value="http://mqreawaken.games/Contact" />
+  <item name="tools.urlbase" value="http://mqreawaken.games/Tools/" />
+  <item name="leaderboard.domain" value="http://mqreawaken.games/Apps/" />
+  <item name="analytics.baseurl" value="http://mqreawaken.games/Analytics/" />
+  <item name="analytics.enabled" value="true" />
+  <item name="analytics.apikey" value="ZKPNDAH88MV5NCZS2B9SRFXL" />
+  <item name="project.name" value="MQReawakened" />
+</MQBuildConfg>
