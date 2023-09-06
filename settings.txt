@@ -1,0 +1,20 @@
+{
+  "launcher": {
+    "baseUrl": "http://mqreawaken.games",
+    "launcherUrl": "/en/dlc/login",
+    "username": "",
+    "newsUrl": "%baseUrl%/api/json/dlc/news",
+    "defaultNews": "No news!",
+    "resolution": "2560x1440",
+    "graphicsQuality": "High",
+    "authToken": "",
+    "fullscreen": "false",
+    "onGameClosePopup": "false"
+  },
+  "patcher": {
+    "env": 4,
+    "baseUrl": "http://mqreawaken.games",
+    "urlFormat": "{0}/game/{1}/{2}.zip",
+    "environment": "live"
+  }
+}
