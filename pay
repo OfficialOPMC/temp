@@ -1,0 +1,4 @@
+Hacker = Exploit()
+Hacker.YieldForProgram('Windows10Universal.exe',True)
+Target_Address = Hacker.ReadPointer(Hacker.getAddressFromName('Windows10Universal.exe+3725888'),[0x8, 0x28, 0x28, 0xD4, 0x30, 0x20, 0xA0])
+Hacker.Pymem.write_float(Target_Address,float(input('New Gravity Value')))
