@@ -1,0 +1,5 @@
+ def GetMemoryInfo(self,Address:int,Handle:int=None):
+  if Handle:
+   return pymem.memory.virtual_query(Handle,Address)
+  else:
+   return pymem.memory.virtual_query(self.Handle,Address)
