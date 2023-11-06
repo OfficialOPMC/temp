@@ -323,7 +323,7 @@ while True:
  if Roblox:
   print("Attached to UWP Microsoft Store Roblox!")
   Roblox = 0
-
+  break
 
 
 Var1 = 0
