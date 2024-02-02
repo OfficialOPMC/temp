@@ -1,0 +1,14 @@
+{
+    "info": {
+        "background_color": "000000FF",
+        "is_joystick": false,
+        "transparent_ESC": true,
+        "transparent_keyboard": true,
+        "transparent_mouse": "Mouse_AllButton_Transparent",
+        "transparent_mouse_windows_raw_move_period": 0,
+        "transparent_wheel": true,
+        "visibility": true
+    },
+    "keymaps": [
+    ]
+}
